@@ -31,3 +31,5 @@ local.properties
 
 # File dell'emulatore e test
 /captures/
+
+instructions.md
