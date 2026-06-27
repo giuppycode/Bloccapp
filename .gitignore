@@ -1,15 +1,33 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle e file di compilazione
+.gradle/
+/build/
+*/build/
+
+# Configurazione locale dell'SDK (NON caricare mai questo file)
 local.properties
+
+# File specifici dell'IDE Android Studio e IntelliJ
+*.iml
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# File specifici per Mac (se usi macOS)
+.DS_Store
+
+# Build native (NDK)
+.externalNativeBuild/
+.cxx/
+
+# File di Log
+*.log
+
+# File di sicurezza e chiavi (Evita che le firme della tua app finiscano online)
+*.jks
+*.keystore
+
+# File dell'emulatore e test
+/captures/
