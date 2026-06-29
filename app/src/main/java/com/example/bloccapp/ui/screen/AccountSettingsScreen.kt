@@ -11,23 +11,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bloccapp.PermissionManager
 import com.example.bloccapp.data.preferences.ThemeMode
 import com.example.bloccapp.ui.viewmodel.AccountSettingsViewModel
 
@@ -124,6 +135,10 @@ fun AccountSettingsScreen(
                 }
             }
 
+            // ── Permissions section ─────────────────────────────────────────
+            SectionLabel("Permessi (richiesti per il blocco app)")
+            PermissionsCard()
+
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -136,4 +151,74 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+@Composable
+private fun PermissionsCard() {
+    val context = LocalContext.current
+    // Stato locale per refresh immediato dopo il tap
+    var usageGranted   by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
+    var overlayGranted by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
+
+    Card(
+        shape    = RoundedCornerShape(16.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PermissionRow(
+                label     = "Accesso utilizzo app",
+                granted   = usageGranted,
+                onRequest = {
+                    PermissionManager.requestUsageStatsPermission(context)
+                    usageGranted = PermissionManager.hasUsageStatsPermission(context)
+                }
+            )
+            PermissionRow(
+                label     = "Mostra sopra altre app (overlay)",
+                granted   = overlayGranted,
+                onRequest = {
+                    PermissionManager.requestOverlayPermission(context)
+                    overlayGranted = PermissionManager.hasOverlayPermission(context)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(label: String, granted: Boolean, onRequest: () -> Unit) {
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector        = if (granted) Icons.Default.CheckCircle else Icons.Default.Error,
+                contentDescription = null,
+                tint               = if (granted) MaterialTheme.colorScheme.primary
+                                     else MaterialTheme.colorScheme.error
+            )
+            Text(
+                text  = label,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        if (!granted) {
+            Button(
+                onClick = onRequest,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Text("Abilita")
+            }
+        }
+    }
 }
