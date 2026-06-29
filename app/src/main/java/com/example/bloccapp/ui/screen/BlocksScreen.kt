@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
-import androidx.compose.foundation.Image
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,9 +24,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Share
@@ -48,17 +49,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,9 +71,12 @@ import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.ui.viewmodel.BlocksViewModel
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +105,6 @@ fun BlocksScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // ── Not blocked ─────────────────────────────────────────────────
             if (notBlocked.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(8.dp))
@@ -119,7 +124,6 @@ fun BlocksScreen(
                 }
             }
 
-            // ── Blocked ─────────────────────────────────────────────────────
             if (blocked.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(12.dp))
@@ -139,7 +143,7 @@ fun BlocksScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(88.dp)) } // spazio per FAB
+            item { Spacer(Modifier.height(88.dp)) }
         }
     }
 }
@@ -160,7 +164,40 @@ private fun BlockItem(
     else
         MaterialTheme.colorScheme.surfaceVariant
 
-    var showPauseSheet by remember { mutableStateOf(false) }
+    // ── Stato sheet ──────────────────────────────────────────────────────────
+    var showUnlockSheet  by remember { mutableStateOf(false) }
+    var pendingAction: (() -> Unit)? by remember { mutableStateOf(null) }
+    var pendingActionLabel by remember { mutableStateOf("") }
+
+    // ── QR scanner launcher (deve essere al top-level del composable, non nello sheet) ──
+    var qrVerifyCallback: ((String) -> Unit)? by remember { mutableStateOf(null) }
+    val qrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        qrVerifyCallback?.invoke(result.contents ?: "")
+        qrVerifyCallback = null
+    }
+
+    fun launchQrScan(onResult: (String) -> Unit) {
+        qrVerifyCallback = onResult
+        qrLauncher.launch(
+            ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                setPrompt("Scansiona il QR code di sblocco")
+                setBeepEnabled(true)
+                setOrientationLocked(false)
+            }
+        )
+    }
+
+    // ── Helpers per richiedere verifica ──────────────────────────────────────
+    fun requestVerified(label: String, action: () -> Unit) {
+        if (block.hasAnyUnlockMethod()) {
+            pendingActionLabel = label
+            pendingAction = action
+            showUnlockSheet = true
+        } else {
+            action()
+        }
+    }
 
     Card(
         shape    = RoundedCornerShape(16.dp),
@@ -206,21 +243,21 @@ private fun BlockItem(
 
                 // ── Actions ──────────────────────────────────────────────────
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Bottone "Pause/Unlock" (visibile solo se abilitato e con metodi configurati)
-                    if (block.isEnabled && block.hasAnyUnlockMethod()) {
-                        IconButton(onClick = { showPauseSheet = true }) {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = "Sblocca",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
                     Switch(
                         checked         = block.isEnabled,
-                        onCheckedChange = { onToggle() }
+                        onCheckedChange = { willBeEnabled ->
+                            if (!willBeEnabled && block.isEnabled) {
+                                // Disattivazione: richiede verifica se ci sono metodi
+                                requestVerified("Disabilita blocco", onToggle)
+                            } else {
+                                // Attivazione: sempre libera
+                                onToggle()
+                            }
+                        }
                     )
-                    IconButton(onClick = onDelete) {
+                    IconButton(
+                        onClick = { requestVerified("Elimina blocco", onDelete) }
+                    ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Elimina",
@@ -232,26 +269,34 @@ private fun BlockItem(
         }
     }
 
-    // ── PauseBlockSheet ──────────────────────────────────────────────────────
-    if (showPauseSheet) {
-        PauseBlockSheet(
-            block      = block,
-            onDismiss  = { showPauseSheet = false },
-            onUnlocked = { showPauseSheet = false; onToggle() }
+    // ── Sheet di verifica ────────────────────────────────────────────────────
+    if (showUnlockSheet) {
+        UnlockToActionSheet(
+            block       = block,
+            actionLabel = pendingActionLabel,
+            onDismiss   = { showUnlockSheet = false; pendingAction = null },
+            onUnlocked  = {
+                showUnlockSheet = false
+                pendingAction?.invoke()
+                pendingAction = null
+            },
+            onScanQr    = ::launchQrScan
         )
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Pause/Unlock BottomSheet
+// Sheet di verifica metodo di sblocco
 // ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PauseBlockSheet(
+private fun UnlockToActionSheet(
     block: Block,
+    actionLabel: String,
     onDismiss: () -> Unit,
-    onUnlocked: () -> Unit
+    onUnlocked: () -> Unit,
+    onScanQr: (onResult: (String) -> Unit) -> Unit
 ) {
     val context    = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -269,116 +314,43 @@ private fun PauseBlockSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Pausa il blocco \"${block.name}\"",
+                text       = "Verifica per: $actionLabel",
                 style      = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                text  = "Sblocca tramite uno dei metodi configurati per \"${block.name}\"",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // ── Timer ────────────────────────────────────────────────────────
             if (block.unlockTimer) {
-                UnlockMethodCard(icon = Icons.Default.Timer, title = "Timer") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Devi attendere ${block.unlockTimerSeconds} minuti prima di poter sbloccare questa app.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Button(
-                            onClick  = onUnlocked,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Avvia il timer e disabilita blocco")
-                        }
-                    }
-                }
+                TimerUnlockSection(
+                    timerSecs  = block.unlockTimerSeconds,
+                    onUnlocked = onUnlocked
+                )
             }
 
             // ── QR Code ──────────────────────────────────────────────────────
             if (block.unlockQrCode && block.unlockQrSecret.isNotBlank()) {
-                val qrBitmap = remember(block.unlockQrSecret) {
-                    generateQrBitmap(block.unlockQrSecret)
-                }
-                UnlockMethodCard(icon = Icons.Default.QrCode, title = "QR Code") {
-                    Column(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalAlignment   = Alignment.CenterHorizontally,
-                        verticalArrangement   = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (qrBitmap != null) {
-                            Image(
-                                bitmap            = qrBitmap.asImageBitmap(),
-                                contentDescription = "QR Code di sblocco",
-                                modifier           = Modifier.size(200.dp)
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick  = { shareQrCode(context, qrBitmap) },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.Share, null)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Condividi")
-                                }
-                                Button(
-                                    onClick  = onUnlocked,
-                                    modifier = Modifier.weight(1f),
-                                    colors   = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.secondary
-                                    )
-                                ) {
-                                    Text("Ho scansionato")
-                                }
-                            }
-                        } else {
-                            Text(
-                                "Errore nella generazione del QR code.",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
+                QrUnlockSection(
+                    qrSecret   = block.unlockQrSecret,
+                    context    = context,
+                    onScanQr   = onScanQr,
+                    onUnlocked = onUnlocked
+                )
             }
 
             // ── PIN ──────────────────────────────────────────────────────────
             if (block.unlockPin && block.unlockPinHash.isNotBlank()) {
-                var pinInput    by remember { mutableStateOf("") }
-                var pinError    by remember { mutableStateOf(false) }
-
-                UnlockMethodCard(icon = Icons.Default.Password, title = "PIN") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value               = pinInput,
-                            onValueChange       = {
-                                if (it.length <= 4 && it.all { c -> c.isDigit() }) {
-                                    pinInput  = it
-                                    pinError  = false
-                                }
-                            },
-                            label               = { Text("Inserisci PIN") },
-                            keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                            visualTransformation = PasswordVisualTransformation(),
-                            isError             = pinError,
-                            supportingText      = if (pinError) { { Text("PIN errato") } } else null,
-                            modifier            = Modifier.fillMaxWidth(),
-                            singleLine          = true
-                        )
-                        Button(
-                            onClick = {
-                                if (sha256(pinInput) == block.unlockPinHash) {
-                                    onUnlocked()
-                                } else {
-                                    pinError = true
-                                }
-                            },
-                            enabled  = pinInput.length == 4,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Conferma PIN")
-                        }
-                    }
-                }
+                PinUnlockSection(
+                    pinHash    = block.unlockPinHash,
+                    onUnlocked = onUnlocked
+                )
             }
 
-            // ── Biometric ────────────────────────────────────────────────────
+            // ── Biometrico ────────────────────────────────────────────────────
             if (block.unlockBiometric) {
                 UnlockMethodCard(icon = Icons.Default.Fingerprint, title = "Biometrico") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -405,7 +377,201 @@ private fun PauseBlockSheet(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Componenti interni
+// Sezione Timer
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun TimerUnlockSection(timerSecs: Int, onUnlocked: () -> Unit) {
+    var timerStarted by remember { mutableStateOf(false) }
+    var secondsLeft  by remember { mutableIntStateOf(timerSecs) }
+    var timerDone    by remember { mutableStateOf(false) }
+
+    LaunchedEffect(timerStarted) {
+        if (!timerStarted) return@LaunchedEffect
+        while (secondsLeft > 0) {
+            delay(1_000L)
+            secondsLeft--
+        }
+        timerDone = true
+    }
+
+    UnlockMethodCard(icon = Icons.Default.Timer, title = "Timer") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            when {
+                !timerStarted -> {
+                    Text(
+                        "Devi attendere $timerSecs secondi prima di poter procedere.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Button(
+                        onClick  = { timerStarted = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Timer, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Avvia il timer ($timerSecs s)")
+                    }
+                }
+                timerStarted && !timerDone -> {
+                    Text(
+                        "Attendi ancora $secondsLeft secondi…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                else -> {
+                    Text(
+                        "Timer completato.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Button(
+                        onClick  = onUnlocked,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CheckCircle, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Conferma")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sezione QR scan
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun QrUnlockSection(
+    qrSecret: String,
+    context: Context,
+    onScanQr: (onResult: (String) -> Unit) -> Unit,
+    onUnlocked: () -> Unit
+) {
+    var qrError      by remember { mutableStateOf(false) }
+    var qrVerified   by remember { mutableStateOf(false) }
+
+    // Genera il bitmap per la condivisione
+    val qrBitmap = remember(qrSecret) { generateQrBitmap(qrSecret) }
+
+    UnlockMethodCard(icon = Icons.Default.QrCode, title = "QR Code") {
+        Column(
+            modifier            = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (qrVerified) {
+                Text(
+                    "✅ QR Code verificato!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Button(
+                    onClick  = onUnlocked,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.CheckCircle, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Conferma")
+                }
+            } else {
+                Text(
+                    "Inquadra il QR code di sblocco con la fotocamera.",
+                    style     = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+
+                if (qrError) {
+                    Text(
+                        "❌ QR Code non valido. Riprova.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        qrError = false
+                        onScanQr { scanned ->
+                            if (scanned == qrSecret) {
+                                qrVerified = true
+                                qrError = false
+                            } else {
+                                qrError = true
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.CameraAlt, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Apri fotocamera")
+                }
+
+                // Bottone secondario: condividi il QR (per recuperarlo se perduto)
+                if (qrBitmap != null) {
+                    Button(
+                        onClick  = { shareQrCode(context, qrBitmap) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors   = ButtonDefaults.outlinedButtonColors()
+                    ) {
+                        Icon(Icons.Default.Share, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Condividi QR (recupero)")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sezione PIN
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun PinUnlockSection(pinHash: String, onUnlocked: () -> Unit) {
+    var pinInput by remember { mutableStateOf("") }
+    var pinError by remember { mutableStateOf(false) }
+
+    UnlockMethodCard(icon = Icons.Default.Password, title = "PIN") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value               = pinInput,
+                onValueChange       = {
+                    if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                        pinInput = it
+                        pinError = false
+                    }
+                },
+                label               = { Text("Inserisci PIN") },
+                keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                visualTransformation = PasswordVisualTransformation(),
+                isError             = pinError,
+                supportingText      = if (pinError) { { Text("PIN errato") } } else null,
+                modifier            = Modifier.fillMaxWidth(),
+                singleLine          = true
+            )
+            Button(
+                onClick  = {
+                    if (sha256(pinInput) == pinHash) onUnlocked()
+                    else pinError = true
+                },
+                enabled  = pinInput.length == 4,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Conferma PIN")
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -436,29 +602,20 @@ private fun UnlockMethodCard(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility functions
+// Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
 private fun Block.hasAnyUnlockMethod(): Boolean =
     unlockTimer || unlockQrCode || unlockPin || unlockBiometric
 
-/** Genera un [Bitmap] quadrato con il QR code del contenuto fornito usando ZXing. */
-private fun generateQrBitmap(content: String, size: Int = 512): Bitmap? {
-    return try {
-        val bitMatrix = MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, size, size)
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        for (x in 0 until size) {
-            for (y in 0 until size) {
-                bmp.setPixel(x, y, if (bitMatrix.get(x, y)) AndroidColor.BLACK else AndroidColor.WHITE)
-            }
-        }
-        bmp
-    } catch (e: Exception) {
-        null
-    }
-}
+private fun generateQrBitmap(content: String, size: Int = 512): Bitmap? = try {
+    val bitMatrix = MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, size, size)
+    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    for (x in 0 until size) for (y in 0 until size)
+        bmp.setPixel(x, y, if (bitMatrix.get(x, y)) AndroidColor.BLACK else AndroidColor.WHITE)
+    bmp
+} catch (e: Exception) { null }
 
-/** Condivide il QR code come immagine PNG tramite un Intent di sistema. */
 private fun shareQrCode(context: Context, bitmap: Bitmap) {
     try {
         val file = File(context.cacheDir, "qr_unlock.png")
@@ -475,7 +632,6 @@ private fun shareQrCode(context: Context, bitmap: Bitmap) {
     }
 }
 
-/** Hash SHA-256 usato per la verifica del PIN. */
 private fun sha256(input: String): String {
     val md = MessageDigest.getInstance("SHA-256")
     return md.digest(input.toByteArray()).joinToString("") { "%02x".format(it) }
