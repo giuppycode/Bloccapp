@@ -379,7 +379,7 @@ private fun HowToUnblockSection(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        "Wait ${config.timerMinutes} min before unblocking",
+                        "Wait ${config.timerMinutes} seconds before unblocking",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
