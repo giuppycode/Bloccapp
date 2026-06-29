@@ -1,11 +1,11 @@
 package com.example.bloccapp.ui.viewmodel
 
 import android.app.Application
-import android.app.usage.UsageStatsManager
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bloccapp.AppUsageInfo
+import com.example.bloccapp.UsageStatsProvider
+import com.example.bloccapp.data.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,10 +17,12 @@ import java.util.Locale
 
 /** Dati di utilizzo aggregati per una settimana. */
 data class WeeklyUsage(
-    val label: String,          // es. "22 giu - 28 giu"
+    val label: String,                // es. "22 giu - 28 giu"
     val startMillis: Long,
     val endMillis: Long,
-    val topApps: List<AppUsageInfo>   // top 5 app ordinate per uso
+    val topApps: List<AppUsageInfo>,  // top 5 app ordinate per uso (screen time)
+    val appsBlocked: Int = 0,         // conteggio eventi "APP_BLOCKED" nella settimana
+    val timesPaused: Int = 0          // conteggio eventi "PAUSED" nella settimana
 )
 
 class ReportsViewModel(application: Application) : AndroidViewModel(application) {
@@ -32,10 +34,11 @@ class ReportsViewModel(application: Application) : AndroidViewModel(application)
 
     private fun loadWeeks() {
         viewModelScope.launch(Dispatchers.IO) {
-            val ctx  = getApplication<Application>()
-            val usm  = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            val fmt  = SimpleDateFormat("d MMM", Locale.ITALIAN)
-            val list = mutableListOf<WeeklyUsage>()
+            val ctx        = getApplication<Application>()
+            val db         = AppDatabase.getInstance(ctx)
+            val eventDao   = db.blockEventDao()
+            val fmt        = SimpleDateFormat("d MMM", Locale.ITALIAN)
+            val list       = mutableListOf<WeeklyUsage>()
 
             // Carica le ultime 4 settimane
             repeat(4) { weekOffset ->
@@ -55,27 +58,18 @@ class ReportsViewModel(application: Application) : AndroidViewModel(application)
                     set(Calendar.MILLISECOND, 0)
                 }
                 val start = startCal.timeInMillis
-                val end   = endCal.timeInMillis
+                val end   = minOf(endCal.timeInMillis, System.currentTimeMillis())
                 val label = "${fmt.format(startCal.time)} - ${fmt.format(endCal.time)}"
 
-                val stats = usm?.queryUsageStats(
-                    UsageStatsManager.INTERVAL_WEEKLY, start, end
-                ) ?: emptyList()
+                // Dati utilizzo (queryEvents per launchCount e notificationCount)
+                val allApps = UsageStatsProvider.getAppStatsForRange(ctx, start, end)
+                val topApps = allApps.take(5)
 
-                val topApps: List<AppUsageInfo> = stats
-                    .filter { it.totalTimeInForeground > 0 }
-                    .sortedByDescending { it.totalTimeInForeground }
-                    .take(5)
-                    .map { s ->
-                        val name = try {
-                            ctx.packageManager.getApplicationLabel(
-                                ctx.packageManager.getApplicationInfo(s.packageName, 0)
-                            ).toString()
-                        } catch (_: Exception) { s.packageName }
-                        AppUsageInfo(s.packageName, name, s.totalTimeInForeground)
-                    }
+                // Statistiche blocco dalla tabella block_events
+                val appsBlocked = eventDao.countBlocked(start, end)
+                val timesPaused = eventDao.countPaused(start, end)
 
-                list.add(WeeklyUsage(label, start, end, topApps))
+                list.add(WeeklyUsage(label, start, end, topApps, appsBlocked, timesPaused))
             }
             _weeks.value = list
         }
