@@ -1,0 +1,573 @@
+package com.example.bloccapp.ui.screen
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bloccapp.data.model.ScheduleConfig
+import com.example.bloccapp.data.model.ScheduleType
+import com.example.bloccapp.data.model.UnlockConfig
+import com.example.bloccapp.data.model.WhatConfig
+import com.example.bloccapp.ui.viewmodel.AddBlockViewModel
+import androidx.compose.foundation.shape.RoundedCornerShape
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddBlockScreen(
+    onBack: () -> Unit,
+    onSelectApps: (currentPackages: List<String>) -> Unit,
+    vm: AddBlockViewModel = viewModel()
+) {
+    val blockName        by vm.blockName.collectAsStateWithLifecycle()
+    val selectedPackages by vm.selectedPackages.collectAsStateWithLifecycle()
+    val schedule         by vm.schedule.collectAsStateWithLifecycle()
+    val whatConfig       by vm.whatConfig.collectAsStateWithLifecycle()
+    val unlockConfig     by vm.unlockConfig.collectAsStateWithLifecycle()
+    val saved            by vm.saved.collectAsStateWithLifecycle()
+
+    var showWhenSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(saved) { if (saved) onBack() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Add block", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Spacer(Modifier.height(4.dp))
+
+            // ── Block name ───────────────────────────────────────────────────
+            OutlinedTextField(
+                value         = blockName,
+                onValueChange = { vm.setBlockName(it) },
+                placeholder   = {
+                    Text(
+                        "Block name",
+                        modifier  = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                textStyle = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    textAlign  = TextAlign.Center
+                ),
+                shape    = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // ── Selected apps ────────────────────────────────────────────────
+            FormRowNavigable(
+                label   = "Selected apps",
+                value   = if (selectedPackages.isEmpty()) "" else "${selectedPackages.size} app selezionate",
+                onClick = { onSelectApps(selectedPackages) }
+            )
+
+            // ── When to block ────────────────────────────────────────────────
+            FormRowNavigable(
+                label   = "When to block",
+                value   = schedule.displayText(),
+                onClick = { showWhenSheet = true }
+            )
+
+            // ── What to block ─────────────────────────────────────────────────
+            WhatToBlockSection(config = whatConfig, onUpdate = { vm.setWhatConfig(it) })
+
+            // ── How to unblock ────────────────────────────────────────────────
+            HowToUnblockSection(config = unlockConfig, onUpdate = { vm.setUnlockConfig(it) })
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick  = { vm.saveBlock() },
+                enabled  = blockName.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Salva blocco")
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    // ── ModalBottomSheet "When to block" ──────────────────────────────────────
+    if (showWhenSheet) {
+        WhenToBlockSheet(
+            schedule  = schedule,
+            onDismiss = { showWhenSheet = false },
+            onConfirm = { vm.setSchedule(it); showWhenSheet = false }
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// When to block — BottomSheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WhenToBlockSheet(
+    schedule: ScheduleConfig,
+    onDismiss: () -> Unit,
+    onConfirm: (ScheduleConfig) -> Unit
+) {
+    var local by remember { mutableStateOf(schedule) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                "When to block",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // Radio: No restriction
+            ScheduleRadioRow(
+                label    = "No restriction",
+                selected = local.type == ScheduleType.NONE,
+                onClick  = { local = local.copy(type = ScheduleType.NONE) }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // Radio: Time slot
+            ScheduleRadioRow(
+                label    = "Time slot (es. 9:00 – 17:00)",
+                selected = local.type == ScheduleType.TIME_SLOT,
+                onClick  = { local = local.copy(type = ScheduleType.TIME_SLOT) }
+            )
+            if (local.type == ScheduleType.TIME_SLOT) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(start = 40.dp, bottom = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value         = local.startTime,
+                        onValueChange = { local = local.copy(startTime = it) },
+                        label         = { Text("From") },
+                        placeholder   = { Text("09:00") },
+                        modifier      = Modifier.weight(1f),
+                        singleLine    = true
+                    )
+                    OutlinedTextField(
+                        value         = local.endTime,
+                        onValueChange = { local = local.copy(endTime = it) },
+                        label         = { Text("To") },
+                        placeholder   = { Text("17:00") },
+                        modifier      = Modifier.weight(1f),
+                        singleLine    = true
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // Radio: Daily usage limit
+            ScheduleRadioRow(
+                label    = "Daily usage limit",
+                selected = local.type == ScheduleType.DAILY_USAGE,
+                onClick  = { local = local.copy(type = ScheduleType.DAILY_USAGE) }
+            )
+            if (local.type == ScheduleType.DAILY_USAGE) {
+                Column(
+                    modifier = Modifier.padding(start = 40.dp, end = 8.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Max ${local.dailyUsageLimitMinutes} min/day",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Slider(
+                        value         = local.dailyUsageLimitMinutes.toFloat(),
+                        onValueChange = { local = local.copy(dailyUsageLimitMinutes = it.toInt()) },
+                        valueRange    = 5f..480f,
+                        steps         = 94,   // (480-5)/5 - 1 = 94 step da 5 in 5 minuti
+                        modifier      = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // Radio: Daily open count
+            ScheduleRadioRow(
+                label    = "Daily open count",
+                selected = local.type == ScheduleType.DAILY_OPENS,
+                onClick  = { local = local.copy(type = ScheduleType.DAILY_OPENS) }
+            )
+            if (local.type == ScheduleType.DAILY_OPENS) {
+                Column(
+                    modifier = Modifier.padding(start = 40.dp, end = 8.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Max ${local.dailyOpenCountLimit} opens/day",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Slider(
+                        value         = local.dailyOpenCountLimit.toFloat(),
+                        onValueChange = { local = local.copy(dailyOpenCountLimit = it.toInt()) },
+                        valueRange    = 1f..50f,
+                        steps         = 48,   // 1..50 passo 1 → 48 step intermedi
+                        modifier      = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick  = { onConfirm(local) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Confirm")
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// What to block — inline FilterChips
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun WhatToBlockSection(
+    config: WhatConfig,
+    onUpdate: (WhatConfig) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "What to block",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected     = config.appStart,
+                onClick      = { onUpdate(config.copy(appStart = !config.appStart)) },
+                label        = { Text("App start") },
+                leadingIcon  = if (config.appStart) {
+                    { Icon(Icons.Default.Block, null, Modifier.size(FilterChipDefaults.IconSize)) }
+                } else null
+            )
+            FilterChip(
+                selected     = config.notifications,
+                onClick      = { onUpdate(config.copy(notifications = !config.notifications)) },
+                label        = { Text("Notifications") },
+                leadingIcon  = if (config.notifications) {
+                    { Icon(Icons.Default.NotificationsOff, null, Modifier.size(FilterChipDefaults.IconSize)) }
+                } else null
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// How to unblock — inline toggle cards
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HowToUnblockSection(
+    config: UnlockConfig,
+    onUpdate: (UnlockConfig) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "How to unblock",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // ── Timer ────────────────────────────────────────────────────────────
+        UnlockCard(
+            icon    = Icons.Default.Timer,
+            label   = "Timer",
+            checked = config.timer,
+            onToggle = { onUpdate(config.copy(timer = it)) }
+        ) {
+            if (config.timer) {
+                Column(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Wait ${config.timerMinutes} min before unblocking",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Slider(
+                        value         = config.timerMinutes.toFloat(),
+                        onValueChange = { onUpdate(config.copy(timerMinutes = it.toInt())) },
+                        valueRange    = 5f..120f,
+                        steps         = 22,   // (120-5)/5 - 1 = 22
+                        modifier      = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // ── QR Code ──────────────────────────────────────────────────────────
+        UnlockCard(
+            icon    = Icons.Default.QrCode,
+            label   = "QR Code",
+            checked = config.qrCode,
+            onToggle = { onUpdate(config.copy(qrCode = it)) }
+        ) {
+            if (config.qrCode) {
+                Text(
+                    "Un QR code verrà generato al salvataggio. Scansionarlo per sbloccare.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+        }
+
+        // ── PIN ──────────────────────────────────────────────────────────────
+        UnlockCard(
+            icon    = Icons.Default.Password,
+            label   = "PIN",
+            checked = config.pin,
+            onToggle = { onUpdate(config.copy(pin = it)) }
+        ) {
+            if (config.pin) {
+                OutlinedTextField(
+                    value         = config.pinRaw,
+                    onValueChange = {
+                        if (it.length <= 4 && it.all { c -> c.isDigit() })
+                            onUpdate(config.copy(pinRaw = it))
+                    },
+                    label               = { Text("4-digit PIN") },
+                    keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier            = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    singleLine          = true
+                )
+            }
+        }
+
+        // ── Biometric ────────────────────────────────────────────────────────
+        UnlockCard(
+            icon    = Icons.Default.Fingerprint,
+            label   = "Biometrico",
+            checked = config.biometric,
+            onToggle = { onUpdate(config.copy(biometric = it)) }
+        ) {
+            if (config.biometric) {
+                Text(
+                    "Usa impronta digitale o riconoscimento facciale.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Componenti interni condivisi
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Riga cliccabile con freccia, usata per "Selected apps" e "When to block". */
+@Composable
+private fun FormRowNavigable(
+    label: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Card(
+            shape    = RoundedCornerShape(12.dp),
+            colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+        ) {
+            Row(
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Text(
+                    text  = value.ifBlank { "Seleziona…" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (value.isBlank())
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/** Riga radio per la selezione del tipo di orario. */
+@Composable
+private fun ScheduleRadioRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** Card toggle per i metodi di sblocco. [content] viene mostrato sotto quando abilitato. */
+@Composable
+private fun UnlockCard(
+    icon: ImageVector,
+    label: String,
+    checked: Boolean,
+    onToggle: (Boolean) -> Unit,
+    content: @Composable () -> Unit
+) {
+    Card(
+        shape  = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (checked)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment  = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        tint = if (checked) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        label,
+                        style      = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                }
+                Switch(checked = checked, onCheckedChange = onToggle)
+            }
+            content()
+        }
+    }
+}
