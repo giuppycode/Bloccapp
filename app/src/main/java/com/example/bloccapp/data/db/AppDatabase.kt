@@ -7,10 +7,12 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.bloccapp.data.db.dao.BlockDao
+import com.example.bloccapp.data.db.dao.BlockEventDao
 import com.example.bloccapp.data.db.dao.BlockRuleDao
 import com.example.bloccapp.data.db.dao.GamificationHistoryDao
 import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.data.db.entity.BlockApp
+import com.example.bloccapp.data.db.entity.BlockEvent
 import com.example.bloccapp.data.db.entity.BlockRule
 import com.example.bloccapp.data.db.entity.GamificationHistory
 
@@ -21,15 +23,17 @@ import com.example.bloccapp.data.db.entity.GamificationHistory
  * v2 → aggiunta tabelle Block e BlockApp (campi stringa generici).
  * v3 → refactoring tabella Block: rimosse colonne stringa generiche,
  *       aggiunte colonne tipizzate per schedule, whatToBlock e howToUnblock.
+ * v4 → aggiunta tabella block_events per il tracking degli eventi di blocco.
  */
 @Database(
     entities = [
         BlockRule::class,
         GamificationHistory::class,
         Block::class,
-        BlockApp::class
+        BlockApp::class,
+        BlockEvent::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun blockRuleDao(): BlockRuleDao
     abstract fun gamificationHistoryDao(): GamificationHistoryDao
     abstract fun blockDao(): BlockDao
+    abstract fun blockEventDao(): BlockEventDao
 
     companion object {
         @Volatile
@@ -120,6 +125,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Migrazione 3→4: aggiunge la tabella block_events. */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `block_events` (
+                        `id`          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `blockId`     INTEGER NOT NULL,
+                        `packageName` TEXT    NOT NULL,
+                        `eventType`   TEXT    NOT NULL,
+                        `timestamp`   INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -127,7 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "bloccapp.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }
