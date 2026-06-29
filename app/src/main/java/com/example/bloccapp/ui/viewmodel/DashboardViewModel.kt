@@ -4,18 +4,22 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bloccapp.AppUsageInfo
+import com.example.bloccapp.DailyUsageData
 import com.example.bloccapp.UsageStatsProvider
 import com.example.bloccapp.data.db.AppDatabase
 import com.example.bloccapp.data.db.entity.GamificationHistory
 import com.example.bloccapp.data.preferences.AuthPreferencesManager
 import com.example.bloccapp.data.preferences.UserInfo
 import com.example.bloccapp.data.repository.GamificationRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,9 +39,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val recentHistory: StateFlow<List<GamificationHistory>> = gamificationRepo.allHistory
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _topApps = MutableStateFlow<List<AppUsageInfo>>(emptyList())
-    /** Top 5 app per tempo di utilizzo giornaliero. */
-    val topApps: StateFlow<List<AppUsageInfo>> = _topApps.asStateFlow()
+    private val _dailyData = MutableStateFlow(DailyUsageData(emptyList()))
+    /** Tutti i dati di utilizzo della giornata (app + bucket orari). */
+    val dailyData: StateFlow<DailyUsageData> = _dailyData.asStateFlow()
+
+    /** Top 5 app per screen time — mantenuto per retrocompatibilità. */
+    val topApps: StateFlow<List<AppUsageInfo>> = _dailyData
+        .map { it.apps.take(5) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _hasUsagePermission = MutableStateFlow(false)
     val hasUsagePermission: StateFlow<Boolean> = _hasUsagePermission.asStateFlow()
@@ -52,8 +61,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val hasPermission = com.example.bloccapp.PermissionManager.hasUsageStatsPermission(ctx)
             _hasUsagePermission.value = hasPermission
             if (hasPermission) {
-                val usage = UsageStatsProvider.getInstalledAppsUsage(ctx)
-                _topApps.value = usage.take(5)
+                val data = withContext(Dispatchers.IO) {
+                    UsageStatsProvider.getDailyUsageData(ctx)
+                }
+                _dailyData.value = data
             }
         }
     }

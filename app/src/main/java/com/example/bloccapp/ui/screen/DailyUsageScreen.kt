@@ -1,6 +1,7 @@
 package com.example.bloccapp.ui.screen
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,171 +11,413 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.AppUsageInfo
+import com.example.bloccapp.DailyUsageData
 import com.example.bloccapp.ui.viewmodel.DashboardViewModel
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter enum
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum class UsageFilter(val label: String) {
+    SCREEN_TIME("Screen Time"),
+    TIMES_OPENED("Launches"),
+    NOTIFICATIONS("Notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen
+// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyUsageScreen(
     vm: DashboardViewModel = viewModel()
 ) {
-    val topApps by vm.topApps.collectAsStateWithLifecycle()
-    val hasPerm by vm.hasUsagePermission.collectAsStateWithLifecycle()
+    val dailyData by vm.dailyData.collectAsStateWithLifecycle()
+    val hasPerm   by vm.hasUsagePermission.collectAsStateWithLifecycle()
+
+    var activeFilter by remember { mutableStateOf(UsageFilter.SCREEN_TIME) }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Daily app usage", fontWeight = FontWeight.Bold) })
+            TopAppBar(title = { Text("Daily Usage", fontWeight = FontWeight.Bold) })
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Spacer(Modifier.height(4.dp))
-
-            // ── Grafico grande ────────────────────────────────────────────────
-            UsageBarChartCard(
-                apps     = topApps,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            )
-
-            // ── Due card medie ─────────────────────────────────────────────────
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        if (!hasPerm) {
+            Box(
+                modifier         = Modifier.fillMaxSize().padding(innerPadding).padding(24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                TotalTimeCard(apps = topApps, modifier = Modifier.weight(1f))
-                TopAppCard(apps   = topApps, modifier = Modifier.weight(1f))
+                Text(
+                    text  = "Abilita il permesso di accesso all'utilizzo nelle Impostazioni di sistema.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+        } else {
+            LazyColumn(
+                modifier              = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement   = Arrangement.spacedBy(12.dp)
+            ) {
+                item { Spacer(Modifier.height(4.dp)) }
 
-            Spacer(Modifier.height(16.dp))
+                // ── Filter chips ─────────────────────────────────────────────
+                item {
+                    UsageFilterRow(
+                        activeFilter     = activeFilter,
+                        onFilterSelected = { activeFilter = it }
+                    )
+                }
+
+                // ── Hourly bar chart ─────────────────────────────────────────
+                item {
+                    HourlyChartCard(
+                        data     = dailyData,
+                        filter   = activeFilter,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                    )
+                }
+
+                // ── App list ─────────────────────────────────────────────────
+                if (dailyData.apps.isEmpty()) {
+                    item {
+                        Box(
+                            modifier         = Modifier.fillMaxWidth().padding(top = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text  = "Nessun dato disponibile per oggi.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    item {
+                        Text(
+                            text  = "App usage",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    val maxMs = dailyData.apps.first().totalTimeInForeground.coerceAtLeast(1L)
+
+                    items(
+                        items = dailyData.apps,
+                        key   = { it.packageName }
+                    ) { app ->
+                        AppUsageRow(app = app, maxMs = maxMs)
+                    }
+                }
+
+                item { Spacer(Modifier.height(88.dp)) }
+            }
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Componenti interni
+// Filter chips row
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun UsageBarChartCard(
-    apps: List<AppUsageInfo>,
+private fun UsageFilterRow(
+    activeFilter: UsageFilter,
+    onFilterSelected: (UsageFilter) -> Unit
+) {
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        UsageFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = activeFilter == filter,
+                onClick  = { onFilterSelected(filter) },
+                label    = {
+                    Text(
+                        text     = filter.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style    = MaterialTheme.typography.labelSmall
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hourly bar chart
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HourlyChartCard(
+    data: DailyUsageData,
+    filter: UsageFilter,
     modifier: Modifier = Modifier
 ) {
-    val barColor = MaterialTheme.colorScheme.primary
+    // Valori per le 24 ore in base al filtro attivo
+    val hourlyValues = remember(data, filter) {
+        FloatArray(24) { h ->
+            when (filter) {
+                UsageFilter.SCREEN_TIME   -> data.hourlyScreenTimeMs[h].toFloat()
+                UsageFilter.TIMES_OPENED  -> data.hourlyTimesOpened[h].toFloat()
+                UsageFilter.NOTIFICATIONS -> data.hourlyNotifications[h].toFloat()
+            }
+        }
+    }
+    val maxValue = (hourlyValues.maxOrNull() ?: 0f).coerceAtLeast(1f)
+
+    val textMeasurer = rememberTextMeasurer()
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val labelColor   = MaterialTheme.colorScheme.onSurfaceVariant
+    val gridColor    = MaterialTheme.colorScheme.outlineVariant
+    val labelStyle   = TextStyle(fontSize = 9.sp, color = labelColor)
 
     Card(
         shape    = RoundedCornerShape(16.dp),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = modifier
     ) {
-        if (apps.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Nessun dato disponibile", style = MaterialTheme.typography.bodyMedium)
-            }
-        } else {
-            val maxTime = apps.maxOf { it.totalTimeInForeground }.coerceAtLeast(1L)
-            Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                val barCount  = apps.size
-                val gap       = 8.dp.toPx()
-                val barWidth  = (size.width - gap * (barCount - 1)) / barCount
-                val maxHeight = size.height - 24.dp.toPx()
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 12.dp, start = 4.dp, end = 8.dp, bottom = 4.dp)
+        ) {
+            val leftPad   = 44.dp.toPx()
+            val bottomPad = 20.dp.toPx()
+            val chartW    = size.width - leftPad
+            val chartH    = size.height - bottomPad
 
-                apps.forEachIndexed { i, app ->
-                    val fraction = app.totalTimeInForeground.toFloat() / maxTime
-                    val barH     = maxHeight * fraction
-                    val x        = i * (barWidth + gap)
-                    val y        = size.height - barH
-                    drawRoundRect(
-                        color       = barColor,
-                        topLeft     = Offset(x, y),
-                        size        = Size(barWidth, barH),
-                        cornerRadius = CornerRadius(6.dp.toPx())
+            // ── Y-axis: 4 livelli + grid lines ───────────────────────────────
+            val ySteps = 4
+            for (i in 0..ySteps) {
+                val frac  = i.toFloat() / ySteps
+                val value = maxValue * frac
+                val y     = chartH * (1f - frac)
+
+                // Grid line
+                drawLine(
+                    color       = gridColor,
+                    start       = Offset(leftPad, y),
+                    end         = Offset(size.width, y),
+                    strokeWidth = 0.5f
+                )
+
+                // Label asse Y
+                val label = if (filter == UsageFilter.SCREEN_TIME)
+                    formatYLabelMs(value.toLong())
+                else
+                    value.toInt().toString()
+
+                val measured = textMeasurer.measure(label, labelStyle)
+                drawText(
+                    textLayoutResult = measured,
+                    topLeft = Offset(
+                        x = leftPad - measured.size.width.toFloat() - 4.dp.toPx(),
+                        y = y - measured.size.height / 2f
+                    )
+                )
+            }
+
+            // ── X-axis: etichette orarie ─────────────────────────────────────
+            listOf(0, 4, 8, 12, 16, 20, 23).forEach { hour ->
+                val x        = leftPad + (hour.toFloat() / 23f) * chartW
+                val measured = textMeasurer.measure("${hour}h", labelStyle)
+                drawText(
+                    textLayoutResult = measured,
+                    topLeft = Offset(
+                        x = (x - measured.size.width / 2f)
+                            .coerceIn(leftPad, size.width - measured.size.width.toFloat()),
+                        y = chartH + 4.dp.toPx()
+                    )
+                )
+            }
+
+            // ── Barre orarie ─────────────────────────────────────────────────
+            val slotW  = chartW / 24f
+            val barW   = slotW * 0.65f
+            val barOff = (slotW - barW) / 2f
+
+            for (hour in 0..23) {
+                val value = hourlyValues[hour]
+                if (value <= 0f) continue
+                val frac = (value / maxValue).coerceIn(0f, 1f)
+                val barH = chartH * frac
+                val x    = leftPad + hour * slotW + barOff
+                val y    = chartH - barH
+                drawRoundRect(
+                    color        = primaryColor,
+                    topLeft      = Offset(x, y),
+                    size         = Size(barW, barH),
+                    cornerRadius = CornerRadius(3.dp.toPx())
+                )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// App usage row
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AppUsageRow(app: AppUsageInfo, maxMs: Long) {
+    val context = LocalContext.current
+
+    // Carica l'icona dell'app in modo asincrono
+    val icon by produceState<ImageBitmap?>(initialValue = null, key1 = app.packageName) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.packageManager
+                    .getApplicationIcon(app.packageName)
+                    .toBitmap()
+                    .asImageBitmap()
+            }.getOrNull()
+        }
+    }
+
+    val fraction = (app.totalTimeInForeground.toFloat() / maxMs).coerceIn(0f, 1f)
+
+    Column {
+        Row(
+            modifier          = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // ── Icona app ────────────────────────────────────────────────────
+            Box(
+                modifier         = Modifier.size(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (icon != null) {
+                    Image(
+                        bitmap             = icon!!,
+                        contentDescription = app.appName,
+                        modifier           = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector        = Icons.Default.Android,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier           = Modifier.fillMaxSize()
                     )
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun TotalTimeCard(apps: List<AppUsageInfo>, modifier: Modifier = Modifier) {
-    val totalMs  = apps.sumOf { it.totalTimeInForeground }
-    val hours    = TimeUnit.MILLISECONDS.toHours(totalMs)
-    val minutes  = TimeUnit.MILLISECONDS.toMinutes(totalMs) % 60
+            Spacer(Modifier.width(12.dp))
 
-    Card(
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        modifier = modifier.height(120.dp)
-    ) {
-        Column(
-            modifier          = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Tempo totale", style = MaterialTheme.typography.labelMedium)
-            Text(
-                text  = "${hours}h ${minutes}m",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun TopAppCard(apps: List<AppUsageInfo>, modifier: Modifier = Modifier) {
-    val top = apps.firstOrNull()
-
-    Card(
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        modifier = modifier.height(120.dp)
-    ) {
-        Column(
-            modifier          = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("App più usata", style = MaterialTheme.typography.labelMedium)
-            Text(
-                text  = top?.appName ?: "—",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2
-            )
-            if (top != null) {
-                val m = TimeUnit.MILLISECONDS.toMinutes(top.totalTimeInForeground)
-                Text("${m}m", style = MaterialTheme.typography.bodySmall)
+            // ── Nome + barra ─────────────────────────────────────────────────
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text       = app.appName,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines   = 1,
+                    overflow   = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress   = { fraction },
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color      = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
             }
+
+            Spacer(Modifier.width(12.dp))
+
+            // ── Tempo hh:mm:ss ───────────────────────────────────────────────
+            Text(
+                text  = formatDuration(app.totalTimeInForeground),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = FontFamily.Monospace
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utility
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Formatta una durata in millisecondi come hh:mm:ss */
+private fun formatDuration(ms: Long): String {
+    val h = ms / 3_600_000L
+    val m = (ms % 3_600_000L) / 60_000L
+    val s = (ms % 60_000L) / 1_000L
+    return "%02d:%02d:%02d".format(h, m, s)
+}
+
+/** Etichetta breve per l'asse Y del grafico (millisecondi → testo) */
+private fun formatYLabelMs(ms: Long): String = when {
+    ms <= 0L         -> "0"
+    ms >= 3_600_000L -> "${ms / 3_600_000L}h"
+    ms >= 60_000L    -> "${ms / 60_000L}m"
+    else             -> "${ms / 1_000L}s"
 }
