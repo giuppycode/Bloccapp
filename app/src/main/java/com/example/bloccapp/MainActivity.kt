@@ -20,7 +20,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.mutableStateListOf
+
 class MainActivity : ComponentActivity() {
+    private val appUsageList = mutableStateListOf<AppUsageInfo>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -37,8 +44,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun DigitalWellbeingScreen() {
-        var hasUsagePermission by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(this)) }
-        var hasOverlayPermission by remember { mutableStateOf(PermissionManager.hasOverlayPermission(this)) }
+        val hasUsagePermission = PermissionManager.hasUsageStatsPermission(this)
+        val hasOverlayPermission = PermissionManager.hasOverlayPermission(this)
 
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "Digital Wellbeing Permissions", style = MaterialTheme.typography.headlineMedium)
@@ -59,20 +66,37 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = {
                         val usage = UsageStatsProvider.getInstalledAppsUsage(this@MainActivity)
-                        usage.forEach { info ->
-                            Log.d("UsageStats", "App: ${info.appName}, Package: ${info.packageName}, Time: ${info.totalTimeInForeground / 1000}s")
+                        appUsageList.clear()
+                        appUsageList.addAll(usage)
+                        if (usage.isEmpty()) {
+                            Log.d("UsageStats", "No usage data found for today.")
+                        } else {
+                            usage.forEach { info ->
+                                Log.d("UsageStats", "App: ${info.appName}, Package: ${info.packageName}, Time: ${info.totalTimeInForeground / 1000}s")
+                            }
                         }
                     },
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
-                    Text("Log App Usage")
+                    Text("Log & Show App Usage")
+                }
+            }
+
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 16.dp)) {
+                items(appUsageList) { info ->
+                    AppUsageItem(info)
+                    HorizontalDivider()
                 }
             }
         }
+    }
 
-        // Re-check permissions when activity resumes
-        LaunchedEffect(Unit) {
-            // Simplified: in a real app we'd use a LifecycleEventObserver
+    @Composable
+    fun AppUsageItem(info: AppUsageInfo) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            Text(text = info.appName, style = MaterialTheme.typography.titleMedium)
+            Text(text = info.packageName, style = MaterialTheme.typography.bodySmall)
+            Text(text = "Usage: ${info.totalTimeInForeground / 1000}s", style = MaterialTheme.typography.bodyMedium)
         }
     }
 
@@ -90,7 +114,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Force recomposition to update permission status
+        // Re-trigger setContent to refresh permission states accurately in UI
         setContent {
             MaterialTheme {
                 Surface(

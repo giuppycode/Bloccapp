@@ -3,6 +3,7 @@ package com.example.bloccapp
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import java.util.Calendar
 
 data class AppUsageInfo(
@@ -18,12 +19,14 @@ object UsageStatsProvider {
         val pm = context.packageManager
 
         val calendar = Calendar.getInstance()
+        val endTime = calendar.timeInMillis
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
         val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
+
+        Log.d("UsageStatsProvider", "Querying from ${java.util.Date(startTime)} to ${java.util.Date(endTime)}")
 
         val stats = usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,
@@ -31,13 +34,15 @@ object UsageStatsProvider {
             endTime
         )
 
+        Log.d("UsageStatsProvider", "Found ${stats?.size ?: 0} raw usage stats entries")
+
         val appUsageList = mutableListOf<AppUsageInfo>()
         if (stats != null) {
             for (usageStats in stats) {
                 try {
-                    val appInfo = pm.getApplicationInfo(usageStats.packageName, 0)
-                    val appName = pm.getApplicationLabel(appInfo).toString()
                     if (usageStats.totalTimeInForeground > 0) {
+                        val appInfo = pm.getApplicationInfo(usageStats.packageName, 0)
+                        val appName = pm.getApplicationLabel(appInfo).toString()
                         appUsageList.add(
                             AppUsageInfo(
                                 usageStats.packageName,
@@ -47,10 +52,11 @@ object UsageStatsProvider {
                         )
                     }
                 } catch (e: PackageManager.NameNotFoundException) {
-                    // App might have been uninstalled
+                    // App might have been uninstalled or is a system component without label
                 }
             }
         }
+        Log.d("UsageStatsProvider", "Returning ${appUsageList.size} processed entries")
         return appUsageList.sortedByDescending { it.totalTimeInForeground }
     }
 }
