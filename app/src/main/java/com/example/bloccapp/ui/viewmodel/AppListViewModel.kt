@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bloccapp.AppUsageInfo
-import com.example.bloccapp.PermissionManager
 import com.example.bloccapp.UsageStatsProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,7 +15,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel per la selezione app (AppSelectionScreen).
- * Carica la lista delle app installate e gestisce ricerca + selezione multipla.
+ * Carica la lista di TUTTE le app installate e gestisce ricerca + selezione multipla.
  */
 class AppListViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -36,35 +35,17 @@ class AppListViewModel(application: Application) : AndroidViewModel(application)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Package selezionati dall'utente (multi-select). */
+    /** Package selezionati dall'utente. */
     private val _selectedPackages = MutableStateFlow<Set<String>>(emptySet())
     val selectedPackages: StateFlow<Set<String>> = _selectedPackages.asStateFlow()
-
-    private val _hasUsagePermission = MutableStateFlow(false)
-    val hasUsagePermission: StateFlow<Boolean> = _hasUsagePermission.asStateFlow()
 
     init { loadApps() }
 
     fun loadApps() {
         viewModelScope.launch {
-            val ctx    = getApplication<Application>().applicationContext
-            val hasPerm = PermissionManager.hasUsageStatsPermission(ctx)
-            _hasUsagePermission.value = hasPerm
-            if (hasPerm) {
-                _allApps.value = UsageStatsProvider.getInstalledAppsUsage(ctx)
-            } else {
-                // Mostra comunque le app installate senza statistiche
-                val pm    = ctx.packageManager
-                val pkgs  = pm.getInstalledApplications(0)
-                    .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-                _allApps.value = pkgs.map { info ->
-                    AppUsageInfo(
-                        packageName          = info.packageName,
-                        appName              = pm.getApplicationLabel(info).toString(),
-                        totalTimeInForeground = 0L
-                    )
-                }.sortedBy { it.appName }
-            }
+            val ctx = getApplication<Application>().applicationContext
+            // Restituisce tutte le app (indipendentemente dal tempo di utilizzo)
+            _allApps.value = UsageStatsProvider.getAllInstalledApps(ctx)
         }
     }
 
