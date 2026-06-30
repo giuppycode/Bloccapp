@@ -5,7 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.service.BlockingState
 import com.example.bloccapp.ui.theme.BloccappTheme
+import com.example.bloccapp.util.BiometricHelper
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
@@ -75,7 +77,7 @@ import java.security.MessageDigest
  *
  * Non fa parte del grafo di navigazione Compose — è un'Activity standalone.
  */
-class BlockedAppActivity : ComponentActivity() {
+class BlockedAppActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "BlockedAppActivity"
@@ -89,6 +91,7 @@ class BlockedAppActivity : ComponentActivity() {
         private const val EXTRA_UNLOCK_PIN_HASH   = "unlock_pin_hash"
         private const val EXTRA_UNLOCK_QR         = "unlock_qr"
         private const val EXTRA_UNLOCK_QR_SECRET  = "unlock_qr_secret"
+        private const val EXTRA_UNLOCK_BIOMETRIC   = "unlock_biometric"
 
         /** Costruisce l'intent con tutti gli extra necessari. */
         fun buildIntent(context: Context, packageName: String, block: Block): Intent =
@@ -102,6 +105,7 @@ class BlockedAppActivity : ComponentActivity() {
                 putExtra(EXTRA_UNLOCK_PIN_HASH,   block.unlockPinHash)
                 putExtra(EXTRA_UNLOCK_QR,         block.unlockQrCode)
                 putExtra(EXTRA_UNLOCK_QR_SECRET,  block.unlockQrSecret)
+                putExtra(EXTRA_UNLOCK_BIOMETRIC,   block.unlockBiometric)
             }
     }
 
@@ -116,6 +120,7 @@ class BlockedAppActivity : ComponentActivity() {
         val unlockPinHash   = intent.getStringExtra(EXTRA_UNLOCK_PIN_HASH)    ?: ""
         val unlockQr        = intent.getBooleanExtra(EXTRA_UNLOCK_QR,         false)
         val unlockQrSecret  = intent.getStringExtra(EXTRA_UNLOCK_QR_SECRET)   ?: ""
+        val unlockBiometric = intent.getBooleanExtra(EXTRA_UNLOCK_BIOMETRIC,   false)
 
         val appName = try {
             packageManager.getApplicationLabel(
@@ -139,6 +144,7 @@ class BlockedAppActivity : ComponentActivity() {
                     unlockPinHash   = unlockPinHash,
                     unlockQr        = unlockQr,
                     unlockQrSecret  = unlockQrSecret,
+                    unlockBiometric = unlockBiometric,
                     onUnlocked      = {
                         BlockingState.grantTemporaryUnlock(blockedPkg)
                         Log.d(TAG, "Temporary unlock granted for $blockedPkg")
@@ -184,10 +190,11 @@ private fun BlockedAppScreen(
     unlockPinHash: String,
     unlockQr: Boolean,
     unlockQrSecret: String,
+    unlockBiometric: Boolean,
     onUnlocked: () -> Unit,
     onGoHome: () -> Unit
 ) {
-    val hasAnyUnlock = unlockTimer || unlockPin || unlockQr
+    val hasAnyUnlock = unlockTimer || unlockPin || unlockQr || unlockBiometric
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -267,6 +274,10 @@ private fun BlockedAppScreen(
                     qrSecret   = unlockQrSecret,
                     onUnlocked = onUnlocked
                 )
+            }
+
+            if (unlockBiometric) {
+                BiometricUnlockCard(onUnlocked = onUnlocked)
             }
 
             // ── Go home button ───────────────────────────────────────────────
@@ -443,6 +454,57 @@ private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
                 Icon(Icons.Default.CameraAlt, null)
                 Spacer(Modifier.width(8.dp))
                 Text("Apri fotocamera")
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Biometric unlock
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun BiometricUnlockCard(onUnlocked: () -> Unit) {
+    val context = LocalContext.current
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    UnlockCard(icon = Icons.Default.Fingerprint, title = "Biometrico") {
+        Column(
+            modifier            = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Usa l'impronta digitale o il riconoscimento facciale per sbloccare l'app.",
+                style     = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+
+            if (errorMsg != null) {
+                Text(
+                    text  = errorMsg!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Button(
+                onClick = {
+                    errorMsg = null
+                    val activity = context as? AppCompatActivity
+                    if (activity != null) {
+                        BiometricHelper.showPrompt(
+                            activity  = activity,
+                            onSuccess = onUnlocked,
+                            onError   = { errorMsg = it }
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Fingerprint, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Sblocca ora")
             }
         }
     }

@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.PermissionManager
@@ -53,6 +57,18 @@ fun AccountSettingsScreen(
 ) {
     val userInfo  by vm.userInfo.collectAsStateWithLifecycle()
     val themeMode by vm.themeMode.collectAsStateWithLifecycle()
+
+    // Rinfresca i permessi ogni volta che l'utente torna nella schermata
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         topBar = {
@@ -140,7 +156,7 @@ fun AccountSettingsScreen(
 
             // ── Permissions section ─────────────────────────────────────────
             SectionLabel("Permessi (richiesti per il blocco app)")
-            PermissionsCard()
+            PermissionsCard(vm)
 
             Spacer(Modifier.height(16.dp))
         }
@@ -157,17 +173,17 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun PermissionsCard() {
+private fun PermissionsCard(vm: AccountSettingsViewModel) {
     val context = LocalContext.current
     
-    var usageGranted   by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
-    var overlayGranted by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
-    var notifyGranted  by remember { mutableStateOf(PermissionManager.hasNotificationsPermission(context)) }
+    val usageGranted   by vm.usagePermissionGranted.collectAsStateWithLifecycle()
+    val overlayGranted by vm.overlayPermissionGranted.collectAsStateWithLifecycle()
+    val notifyGranted  by vm.notificationsPermissionGranted.collectAsStateWithLifecycle()
 
     val notifyLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        notifyGranted = isGranted
+    ) { _ ->
+        vm.refreshPermissions()
     }
 
     Card(

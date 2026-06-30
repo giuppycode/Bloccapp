@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -78,6 +79,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.data.db.BlockWithApps
 import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.ui.viewmodel.BlocksViewModel
+import com.example.bloccapp.util.BiometricHelper
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.journeyapps.barcodescanner.ScanContract
@@ -428,15 +430,36 @@ private fun UnlockToActionSheet(
 
             // ── Biometrico ────────────────────────────────────────────────────
             if (block.unlockBiometric) {
+                var errorMsg by remember { mutableStateOf<String?>(null) }
+
                 UnlockMethodCard(icon = Icons.Default.Fingerprint, title = "Biometrico") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "Autenticazione biometrica disponibile nella Fase 5.",
+                            "Usa la biometria configurata sul dispositivo per procedere.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        
+                        if (errorMsg != null) {
+                            Text(
+                                text  = errorMsg!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
                         Button(
-                            onClick  = onUnlocked,
+                            onClick  = {
+                                errorMsg = null
+                                val activity = context as? AppCompatActivity
+                                if (activity != null) {
+                                    BiometricHelper.showPrompt(
+                                        activity  = activity,
+                                        onSuccess = onUnlocked,
+                                        onError   = { errorMsg = it }
+                                    )
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.Fingerprint, null)

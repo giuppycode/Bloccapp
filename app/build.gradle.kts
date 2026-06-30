@@ -68,6 +68,7 @@ dependencies {
 
     // Material Icons Extended
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.biometric)
 
     // ZXing core (QR code generation) + embedded scanner (QR scan via camera)
     implementation(libs.zxing.core)

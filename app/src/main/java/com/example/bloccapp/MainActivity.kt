@@ -2,7 +2,7 @@ package com.example.bloccapp
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
@@ -13,7 +13,7 @@ import com.example.bloccapp.ui.navigation.AppNavGraph
 import com.example.bloccapp.ui.theme.BloccappTheme
 import com.example.bloccapp.ui.viewmodel.ThemeViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +28,11 @@ class MainActivity : ComponentActivity() {
 
         // Avvia il servizio di blocco se i permessi necessari sono già stati concessi.
         // Se mancano, la schermata Account → Permessi guiderà l'utente.
+        maybeStartBlockingService()
+    }
+
+    override fun onResume() {
+        super.onResume()
         maybeStartBlockingService()
     }
 
