@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -59,6 +60,7 @@ import com.example.bloccapp.AppUsageInfo
 import com.example.bloccapp.DailyUsageData
 import com.example.bloccapp.ui.viewmodel.DashboardViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,6 +84,14 @@ fun DailyUsageScreen(
 ) {
     val dailyData by vm.dailyData.collectAsStateWithLifecycle()
     val hasPerm   by vm.hasUsagePermission.collectAsStateWithLifecycle()
+
+    // Aggiorna i dati all'apertura della schermata e ogni 30 secondi mentre è visibile
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.loadUsageData()
+            delay(30_000L)
+        }
+    }
 
     var activeFilter by remember { mutableStateOf(UsageFilter.SCREEN_TIME) }
 
