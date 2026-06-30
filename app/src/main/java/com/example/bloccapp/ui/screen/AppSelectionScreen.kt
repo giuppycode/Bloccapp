@@ -2,6 +2,7 @@ package com.example.bloccapp.ui.screen
 
 import android.content.pm.ApplicationInfo
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -37,19 +39,27 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.AppUsageInfo
 import com.example.bloccapp.ui.viewmodel.AppListViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,9 +191,21 @@ private fun AppIconItem(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val primaryColor = MaterialTheme.colorScheme.primary
     val bgColor      = MaterialTheme.colorScheme.secondaryContainer
-    val initial      = app.appName.firstOrNull()?.uppercaseChar() ?: '?'
+
+    // Caricamento asincrono dell'icona
+    val icon by produceState<ImageBitmap?>(initialValue = null, key1 = app.packageName) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.packageManager
+                    .getApplicationIcon(app.packageName)
+                    .toBitmap()
+                    .asImageBitmap()
+            }.getOrNull()
+        }
+    }
 
     Column(
         modifier            = modifier.clickable { onToggle() },
@@ -201,12 +223,21 @@ private fun AppIconItem(
                     else Modifier
                 )
         ) {
-            Text(
-                text  = initial.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            if (icon != null) {
+                Image(
+                    bitmap             = icon!!,
+                    contentDescription = app.appName,
+                    modifier           = Modifier.fillMaxSize().padding(8.dp)
+                )
+            } else {
+                Icon(
+                    imageVector        = Icons.Default.Android,
+                    contentDescription = null,
+                    tint               = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
+                    modifier           = Modifier.size(32.dp)
+                )
+            }
+
             if (selected) {
                 Box(
                     Modifier

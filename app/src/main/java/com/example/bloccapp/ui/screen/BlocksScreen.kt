@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,11 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -53,10 +57,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +72,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.data.db.BlockWithApps
@@ -76,7 +85,9 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,6 +155,76 @@ fun BlocksScreen(
             }
 
             item { Spacer(Modifier.height(88.dp)) }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI Components for App Icons in Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AppIconRow(packageNames: List<String>) {
+    if (packageNames.isEmpty()) {
+        Text(
+            text  = "Nessuna app",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+    Row(
+        modifier = Modifier.padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Mostriamo al massimo le prime 6 icone
+        packageNames.take(6).forEach { pkg ->
+            AppSmallIcon(pkg)
+        }
+        if (packageNames.size > 6) {
+            Text(
+                text  = "+${packageNames.size - 6}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppSmallIcon(packageName: String) {
+    val context = LocalContext.current
+    val icon by produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.packageManager
+                    .getApplicationIcon(packageName)
+                    .toBitmap()
+                    .asImageBitmap()
+            }.getOrNull()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (icon != null) {
+            Image(
+                bitmap             = icon!!,
+                contentDescription = null,
+                modifier           = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector        = Icons.Default.Android,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier           = Modifier.fillMaxSize().padding(2.dp)
+            )
         }
     }
 }
@@ -217,12 +298,7 @@ private fun BlockItem(
                         style      = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
-                    val appCount = bwa.apps.size
-                    Text(
-                        text  = if (appCount == 0) "Nessuna app" else "$appCount app",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    AppIconRow(bwa.apps.map { it.packageName })
                     val schedSummary = block.scheduleDisplay()
                     if (schedSummary.isNotBlank()) {
                         Text(
