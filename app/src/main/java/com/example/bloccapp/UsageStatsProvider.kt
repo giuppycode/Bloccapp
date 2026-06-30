@@ -3,7 +3,9 @@ package com.example.bloccapp
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import java.util.Calendar
 
@@ -16,16 +18,13 @@ data class AppUsageInfo(
     val appName: String,
     val totalTimeInForeground: Long,   // ms
     val launchCount: Int = 0,
-    val notificationCount: Int = 0
+    val notificationCount: Int = 0,
+    val category: Int = -1,
+    val isSystemApp: Boolean = false
 )
 
 /**
  * Dati di utilizzo aggregati per la giornata corrente.
- *
- * @param apps                Lista di tutte le app usate oggi, ordinate per [AppUsageInfo.totalTimeInForeground] decrescente
- * @param hourlyScreenTimeMs  Millisecondi di schermo per ciascuna delle 24 ore
- * @param hourlyTimesOpened   Numero di aperture per ciascuna delle 24 ore
- * @param hourlyNotifications Numero di notifiche per ciascuna delle 24 ore
  */
 data class DailyUsageData(
     val apps: List<AppUsageInfo>,
@@ -57,19 +56,13 @@ data class DailyUsageData(
 
 object UsageStatsProvider {
 
-    // Valori interi delle costanti UsageEvents.Event rilevanti
-    // (usati direttamente per evitare problemi di accesso/deprecazione dell'SDK)
-    private const val EVT_FOREGROUND          = 1   // MOVE_TO_FOREGROUND / ACTIVITY_RESUMED
-    private const val EVT_BACKGROUND          = 2   // MOVE_TO_BACKGROUND / ACTIVITY_PAUSED
-    private const val EVT_NOTIFICATION_SEEN   = 10  // NOTIFICATION_SEEN (API 23+)
-    private const val EVT_NOTIFICATION_INTR   = 12  // NOTIFICATION_INTERRUPTION (API 28+)
+    private const val EVT_FOREGROUND          = 1
+    private const val EVT_BACKGROUND          = 2
+    private const val EVT_NOTIFICATION_SEEN   = 10
+    private const val EVT_NOTIFICATION_INTR   = 12
 
     /**
-     * Restituisce i dati di utilizzo aggregati per la giornata corrente usando
-     * [UsageStatsManager.queryEvents], che permette di ricavare:
-     * - tempo in primo piano per-app e per-ora
-     * - numero di aperture per-app e per-ora
-     * - numero di notifiche viste per-app e per-ora
+     * Restituisce i dati di utilizzo aggregati per la giornata corrente.
      */
     fun getDailyUsageData(context: Context): DailyUsageData {
         val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -83,17 +76,12 @@ object UsageStatsProvider {
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-        // Per-app accumulatori
         val screenTimeMs      = mutableMapOf<String, Long>()
         val launchCount       = mutableMapOf<String, Int>()
         val notificationCount = mutableMapOf<String, Int>()
-
-        // Hourly buckets (24 ore)
         val hourlyScreenTimeMs  = LongArray(24)
         val hourlyTimesOpened   = IntArray(24)
         val hourlyNotifications = IntArray(24)
-
-        // Traccia l'inizio della sessione in foreground per ogni app
         val foregroundStart = mutableMapOf<String, Long>()
 
         val events = usm.queryEvents(startOfDay, now)
@@ -111,14 +99,12 @@ object UsageStatsProvider {
                     launchCount[pkg] = (launchCount[pkg] ?: 0) + 1
                     hourlyTimesOpened[hour]++
                 }
-
                 EVT_BACKGROUND -> {
                     val start = foregroundStart.remove(pkg) ?: continue
                     val duration = time - start
                     screenTimeMs[pkg] = (screenTimeMs[pkg] ?: 0L) + duration
                     distributeScreenTime(start, time, startOfDay, hourlyScreenTimeMs)
                 }
-
                 EVT_NOTIFICATION_SEEN,
                 EVT_NOTIFICATION_INTR -> {
                     notificationCount[pkg] = (notificationCount[pkg] ?: 0) + 1
@@ -127,14 +113,12 @@ object UsageStatsProvider {
             }
         }
 
-        // App ancora in foreground: chiude la sessione con "now"
         for ((pkg, start) in foregroundStart) {
             val duration = now - start
             screenTimeMs[pkg] = (screenTimeMs[pkg] ?: 0L) + duration
             distributeScreenTime(start, now, startOfDay, hourlyScreenTimeMs)
         }
 
-        // Costruisce la lista app
         val apps = screenTimeMs.keys.mapNotNull { pkg ->
             try {
                 val appInfo = pm.getApplicationInfo(pkg, 0)
@@ -144,32 +128,52 @@ object UsageStatsProvider {
                     appName               = name,
                     totalTimeInForeground = screenTimeMs[pkg] ?: 0L,
                     launchCount           = launchCount[pkg] ?: 0,
-                    notificationCount     = notificationCount[pkg] ?: 0
+                    notificationCount     = notificationCount[pkg] ?: 0,
+                    category              = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) appInfo.category else -1,
+                    isSystemApp           = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 )
             } catch (_: PackageManager.NameNotFoundException) { null }
         }.sortedByDescending { it.totalTimeInForeground }
 
-        Log.d("UsageStatsProvider", "getDailyUsageData: ${apps.size} apps")
-
-        return DailyUsageData(
-            apps                = apps,
-            hourlyScreenTimeMs  = hourlyScreenTimeMs,
-            hourlyTimesOpened   = hourlyTimesOpened,
-            hourlyNotifications = hourlyNotifications
-        )
+        return DailyUsageData(apps, hourlyScreenTimeMs, hourlyTimesOpened, hourlyNotifications)
     }
 
-    // ── Legacy helper mantenuto per retrocompatibilità ────────────────────────
+    /**
+     * Restituisce TUTTE le app installate che possono essere avviate dal launcher,
+     * arricchite con le statistiche di utilizzo di oggi (se disponibili).
+     */
+    fun getAllInstalledApps(context: Context): List<AppUsageInfo> {
+        val pm = context.packageManager
+        val dailyData = try {
+            getDailyUsageData(context)
+        } catch (e: Exception) {
+            null
+        }
+
+        val usageMap = dailyData?.apps?.associateBy { it.packageName } ?: emptyMap()
+
+        val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+
+        return installedApps.map { info ->
+            val pkg = info.packageName
+            val usage = usageMap[pkg]
+            AppUsageInfo(
+                packageName           = pkg,
+                appName               = pm.getApplicationLabel(info).toString(),
+                totalTimeInForeground = usage?.totalTimeInForeground ?: 0L,
+                launchCount           = usage?.launchCount ?: 0,
+                notificationCount     = usage?.notificationCount ?: 0,
+                category              = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) info.category else -1,
+                isSystemApp           = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            )
+        }.sortedWith(compareByDescending<AppUsageInfo> { it.totalTimeInForeground }.thenBy { it.appName })
+    }
+
+    @Deprecated("Usare getAllInstalledApps o getDailyUsageData().apps", ReplaceWith("getDailyUsageData(context).apps"))
     fun getInstalledAppsUsage(context: Context): List<AppUsageInfo> =
         getDailyUsageData(context).apps
 
-    /**
-     * Restituisce i dati di utilizzo per-app su un range arbitrario usando
-     * [UsageStatsManager.queryEvents]. Popola [AppUsageInfo.totalTimeInForeground],
-     * [AppUsageInfo.launchCount] e [AppUsageInfo.notificationCount].
-     * Utile per aggregazioni settimanali dove [UsageStatsManager.queryUsageStats]
-     * non fornisce launch count né notification count.
-     */
     fun getAppStatsForRange(context: Context, startMs: Long, endMs: Long): List<AppUsageInfo> {
         val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val pm  = context.packageManager
@@ -203,7 +207,6 @@ object UsageStatsProvider {
             }
         }
 
-        // App ancora in foreground alla fine del range
         for ((pkg, start) in foregroundStart) {
             screenTimeMs[pkg] = (screenTimeMs[pkg] ?: 0L) + (endMs - start)
         }
@@ -218,20 +221,15 @@ object UsageStatsProvider {
                     appName               = name,
                     totalTimeInForeground = screenTimeMs[pkg] ?: 0L,
                     launchCount           = launchCount[pkg] ?: 0,
-                    notificationCount     = notificationCount[pkg] ?: 0
+                    notificationCount     = notificationCount[pkg] ?: 0,
+                    category              = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) appInfo.category else -1,
+                    isSystemApp           = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 )
             } catch (_: PackageManager.NameNotFoundException) { null }
         }.sortedByDescending { it.totalTimeInForeground }
     }
 
-    // ── Utility: distribuisce la durata di una sessione sulle ore coinvolte ──
-
-    private fun distributeScreenTime(
-        startMs: Long,
-        endMs: Long,
-        dayStartMs: Long,
-        hourlyMs: LongArray
-    ) {
+    private fun distributeScreenTime(startMs: Long, endMs: Long, dayStartMs: Long, hourlyMs: LongArray) {
         var current = startMs
         while (current < endMs) {
             val hour    = ((current - dayStartMs) / 3_600_000L).toInt().coerceIn(0, 23)
