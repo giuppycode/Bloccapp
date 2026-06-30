@@ -1,11 +1,15 @@
 package com.example.bloccapp
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import android.net.Uri
+import androidx.core.content.ContextCompat
 
 object PermissionManager {
 
@@ -38,5 +42,16 @@ object PermissionManager {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)
+    }
+
+    fun hasNotificationsPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Permission granted by default on older versions
+        }
     }
 }
