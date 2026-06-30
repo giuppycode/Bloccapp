@@ -3,13 +3,11 @@ package com.example.bloccapp.ui.screen
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
@@ -46,7 +45,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -65,8 +62,8 @@ import androidx.compose.ui.unit.dp
 import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.service.BlockingState
 import com.example.bloccapp.ui.theme.BloccappTheme
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.MultiFormatWriter
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.delay
 import java.security.MessageDigest
 
@@ -145,6 +142,17 @@ class BlockedAppActivity : ComponentActivity() {
                     onUnlocked      = {
                         BlockingState.grantTemporaryUnlock(blockedPkg)
                         Log.d(TAG, "Temporary unlock granted for $blockedPkg")
+
+                        // Rilancia l'app sbloccata per assicurarci di tornarci sopra
+                        try {
+                            val launchIntent = packageManager.getLaunchIntentForPackage(blockedPkg)
+                            if (launchIntent != null) {
+                                startActivity(launchIntent)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to relaunch $blockedPkg", e)
+                        }
+
                         finish()
                     },
                     onGoHome        = {
@@ -337,7 +345,7 @@ private fun TimerUnlockCard(timerSecs: Int, onUnlocked: () -> Unit) {
                 ) {
                     Icon(Icons.Default.LockOpen, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Apri per 30 minuti")
+                    Text("Apri per 5 minuti")
                 }
             }
         }
@@ -391,7 +399,14 @@ private fun PinUnlockCard(pinHash: String, onUnlocked: () -> Unit) {
 
 @Composable
 private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
-    val qrBitmap = remember(qrSecret) { generateQrBitmap(qrSecret) }
+    var qrError by remember { mutableStateOf(false) }
+    val qrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        if (result.contents == qrSecret) {
+            onUnlocked()
+        } else if (result.contents != null) {
+            qrError = true
+        }
+    }
 
     UnlockCard(icon = Icons.Default.QrCode, title = "QR Code") {
         Column(
@@ -399,30 +414,35 @@ private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (qrBitmap != null) {
-                Image(
-                    bitmap             = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code di sblocco",
-                    modifier           = Modifier
-                        .size(200.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
+            Text(
+                "Inquadra il QR code di sblocco con la fotocamera.",
+                style     = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+
+            if (qrError) {
                 Text(
-                    "Fai scansionare questo QR code a chi controlla il tuo tempo schermo.",
-                    style     = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant
+                    "QR code non valido. Riprova.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
                 )
-                Button(
-                    onClick  = onUnlocked,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.LockOpen, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Ho confermato il QR")
-                }
-            } else {
-                Text("Errore nella generazione del QR.", color = MaterialTheme.colorScheme.error)
+            }
+
+            Button(
+                onClick = {
+                    qrError = false
+                    qrLauncher.launch(ScanOptions().apply {
+                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                        setPrompt("Scansiona il codice di sblocco")
+                        setBeepEnabled(true)
+                        setOrientationLocked(false)
+                    })
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.CameraAlt, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Apri fotocamera")
             }
         }
     }
@@ -467,11 +487,3 @@ private fun sha256(input: String): String {
     val md = MessageDigest.getInstance("SHA-256")
     return md.digest(input.toByteArray()).joinToString("") { "%02x".format(it) }
 }
-
-private fun generateQrBitmap(content: String, size: Int = 400): Bitmap? = try {
-    val bm = MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, size, size)
-    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    for (x in 0 until size) for (y in 0 until size)
-        bmp.setPixel(x, y, if (bm.get(x, y)) AndroidColor.BLACK else AndroidColor.WHITE)
-    bmp
-} catch (e: Exception) { null }
