@@ -1,5 +1,9 @@
 package com.example.bloccapp.ui.screen
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -156,9 +159,16 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun PermissionsCard() {
     val context = LocalContext.current
-    // Stato locale per refresh immediato dopo il tap
+    
     var usageGranted   by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
     var overlayGranted by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
+    var notifyGranted  by remember { mutableStateOf(PermissionManager.hasNotificationsPermission(context)) }
+
+    val notifyLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        notifyGranted = isGranted
+    }
 
     Card(
         shape    = RoundedCornerShape(16.dp),
@@ -174,7 +184,7 @@ private fun PermissionsCard() {
                 granted   = usageGranted,
                 onRequest = {
                     PermissionManager.requestUsageStatsPermission(context)
-                    usageGranted = PermissionManager.hasUsageStatsPermission(context)
+                    // Nota: questo non aggiorna lo stato subito perché apre un'activity esterna
                 }
             )
             PermissionRow(
@@ -182,7 +192,15 @@ private fun PermissionsCard() {
                 granted   = overlayGranted,
                 onRequest = {
                     PermissionManager.requestOverlayPermission(context)
-                    overlayGranted = PermissionManager.hasOverlayPermission(context)
+                }
+            )
+            PermissionRow(
+                label     = "Notifiche (per avvisi attivazione)",
+                granted   = notifyGranted,
+                onRequest = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notifyLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                 }
             )
         }
