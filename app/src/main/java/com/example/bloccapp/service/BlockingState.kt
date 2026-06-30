@@ -20,9 +20,9 @@ object BlockingState {
 
     /**
      * Concede un unlock temporaneo al pacchetto per [durationMs] millisecondi.
-     * Default: 30 minuti.
+     * Default: 5 minuti.
      */
-    fun grantTemporaryUnlock(packageName: String, durationMs: Long = 30 * 60_000L) {
+    fun grantTemporaryUnlock(packageName: String, durationMs: Long = 5 * 60_000L) {
         unlocks[packageName] = System.currentTimeMillis() + durationMs
     }
 

@@ -43,7 +43,7 @@ class BlockingService : Service() {
         private const val OUR_PACKAGE             = "com.example.bloccapp"
 
         /** Intervallo di refresh della cache usage stats. */
-        private const val USAGE_CACHE_TTL_MS = 60_000L
+        private const val USAGE_CACHE_TTL_MS = 5_000L
     }
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -53,6 +53,8 @@ class BlockingService : Service() {
 
     /** Package bloccato al tick precedente. */
     private var lastBlockedPackage: String? = null
+    /** Timestamp dell'ultimo lancio dell'activity di blocco (ms). */
+    private var lastLaunchTimestamp = 0L
 
     /** Cache usage stats. */
     private var usageCacheTimestamp = 0L
@@ -130,30 +132,49 @@ class BlockingService : Service() {
 
     private suspend fun checkForegroundApp() {
         val currentPkg = getForegroundPackage() ?: return
+        val now = System.currentTimeMillis()
 
+        // Se siamo noi, non facciamo nulla e non resettiamo lastBlockedPackage
+        // per evitare loop se l'overlay è appena stato lanciato.
         if (currentPkg == OUR_PACKAGE) {
-            lastBlockedPackage = null
             return
         }
 
+        // Sblocco temporaneo attivo: resettiamo lo stato di blocco
         if (BlockingState.isTemporarilyUnlocked(currentPkg)) {
             lastBlockedPackage = null
             return
         }
 
+        // Cerchiamo se c'è un blocco attivo per il package corrente
+        var activeBlock: BlockWithApps? = null
         for (bwa in enabledBlocks) {
-            if (!bwa.apps.any { it.packageName == currentPkg }) continue
-            if (!isScheduleActive(bwa)) continue
-
-            if (currentPkg != lastBlockedPackage) {
-                lastBlockedPackage = currentPkg
-                logBlockEvent(bwa.block.id, currentPkg, "APP_BLOCKED")
-                launchBlockedActivity(currentPkg, bwa)
+            if (bwa.apps.any { it.packageName == currentPkg } && isScheduleActive(bwa)) {
+                activeBlock = bwa
+                break
             }
-            return
         }
 
-        lastBlockedPackage = null
+        if (activeBlock != null) {
+            val isNewPackage = (currentPkg != lastBlockedPackage)
+            
+            // L'app deve essere bloccata.
+            // Rilanciamo l'activity se:
+            // 1. Il package è diverso dall'ultimo bloccato (l'utente ha cambiato app)
+            // 2. È passato un intervallo di sicurezza (2s) e l'app bloccata è ancora lì
+            if (isNewPackage || (now - lastLaunchTimestamp) > 2000L) {
+                if (isNewPackage) {
+                    logBlockEvent(activeBlock.block.id, currentPkg, "APP_BLOCKED")
+                }
+                
+                lastBlockedPackage = currentPkg
+                lastLaunchTimestamp = now
+                launchBlockedActivity(currentPkg, activeBlock)
+            }
+        } else {
+            // Nessun blocco attivo per questa app
+            lastBlockedPackage = null
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
