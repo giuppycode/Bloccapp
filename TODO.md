@@ -1,6 +1,3 @@
-- notifiche (a 5 min, 1 min, 30 sec )
 - mappa per il blocco in luogo
-- gameification
-- sistemare bug per la quale quando il blocco si deve attivare mentre sto sull'app interessata il blocco non si attiva ma decvo chiudere e riaprire l'app per vedere il blocco
-- una votla che sblocco l'app per qaunto tempo rimane sbloccata?
-- sistemare padding in alto
+- verificare se a 00 vengono resettati i blocchi di utilizzo
+- testing dell'account su db
