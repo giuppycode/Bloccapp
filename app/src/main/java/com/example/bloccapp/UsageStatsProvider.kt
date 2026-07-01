@@ -87,6 +87,19 @@ object UsageStatsProvider {
         val events = usm.queryEvents(startOfDay, now)
         val event  = UsageEvents.Event()
 
+        // ── Determinazione app già aperta a inizio intervallo (es. mezzanotte) ──
+        // Cerchiamo l'ultimo evento prima dello startOfDay negli ultimi 24h
+        val preEvents = usm.queryEvents(startOfDay - 86_400_000L, startOfDay)
+        var pkgActiveAtStart: String? = null
+        while (preEvents.hasNextEvent()) {
+            preEvents.getNextEvent(event)
+            if (event.eventType == EVT_FOREGROUND) pkgActiveAtStart = event.packageName
+            else if (event.eventType == EVT_BACKGROUND) pkgActiveAtStart = null
+        }
+        if (pkgActiveAtStart != null) {
+            foregroundStart[pkgActiveAtStart] = startOfDay
+        }
+
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val pkg  = event.packageName
