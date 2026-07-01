@@ -45,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -98,6 +99,8 @@ fun BlocksScreen(
     vm: BlocksViewModel = viewModel()
 ) {
     val allBlocks by vm.allBlocks.collectAsStateWithLifecycle()
+    val totalPoints by vm.totalPoints.collectAsStateWithLifecycle()
+    
     val blocked    = allBlocks.filter { it.block.isEnabled }
     val notBlocked = allBlocks.filter { !it.block.isEnabled }
 
@@ -118,9 +121,14 @@ fun BlocksScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // ── Gamification Header ──────────────────────────────────────────
+            item {
+                GamificationHeader(points = totalPoints)
+                Spacer(Modifier.height(8.dp))
+            }
+
             if (notBlocked.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(8.dp))
                     Text(
                         text  = "Not blocked",
                         style = MaterialTheme.typography.labelMedium,
@@ -139,7 +147,7 @@ fun BlocksScreen(
 
             if (blocked.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text  = "Blocked",
                         style = MaterialTheme.typography.labelMedium,
@@ -157,6 +165,86 @@ fun BlocksScreen(
             }
 
             item { Spacer(Modifier.height(88.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun GamificationHeader(points: Int) {
+    val safePoints = points.coerceAtLeast(0)
+    val level = (safePoints / 100) + 1
+    val expInLevel = safePoints % 100
+    val progress = expInLevel / 100f
+
+    val nickname = when {
+        level >= 10 -> "Leggenda"
+        level >= 9  -> "Zen"
+        level >= 8  -> "Maestro del Focus"
+        level >= 7  -> "Disciplinato"
+        level >= 6  -> "Professionista"
+        level >= 5  -> "Costante"
+        level >= 4  -> "Resistente"
+        level >= 3  -> "Amatore"
+        level >= 2  -> "Apprendista"
+        else        -> "Principiante"
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Livello $level",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = nickname,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                Text(
+                    text = "$points PT",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(CircleShape),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Text(
+                    text = "$expInLevel / 100 EXP per il prossimo livello",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
