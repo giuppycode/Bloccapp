@@ -104,8 +104,6 @@ fun AddBlockScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
             // ── Block name ───────────────────────────────────────────────────
             OutlinedTextField(
                 value         = blockName,
@@ -253,6 +251,18 @@ private fun WhenToBlockSheet(
                 onClick  = { local = local.copy(type = ScheduleType.DAILY_USAGE) }
             )
             if (local.type == ScheduleType.DAILY_USAGE) {
+                // Genera i valori selezionabili con sensibilità variabile
+                val selectableValues = remember {
+                    val list = mutableListOf<Int>()
+                    for (i in 1..10) list.add(i)               // 1..10 step 1
+                    for (i in 15..30 step 5) list.add(i)       // 15..30 step 5
+                    for (i in 40..60 step 10) list.add(i)      // 40..60 step 10
+                    for (i in 75..480 step 15) list.add(i)     // 75..480 step 15
+                    list
+                }
+                val currentIndex = selectableValues.indexOfFirst { it >= local.dailyUsageLimitMinutes }
+                    .coerceAtLeast(0)
+
                 Column(
                     modifier = Modifier.padding(start = 40.dp, end = 8.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -263,10 +273,13 @@ private fun WhenToBlockSheet(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Slider(
-                        value         = local.dailyUsageLimitMinutes.toFloat(),
-                        onValueChange = { local = local.copy(dailyUsageLimitMinutes = it.toInt()) },
-                        valueRange    = 5f..480f,
-                        steps         = 94,   // (480-5)/5 - 1 = 94 step da 5 in 5 minuti
+                        value         = currentIndex.toFloat(),
+                        onValueChange = { index ->
+                            val newValue = selectableValues[index.toInt()]
+                            local = local.copy(dailyUsageLimitMinutes = newValue)
+                        },
+                        valueRange    = 0f..(selectableValues.size - 1).toFloat(),
+                        steps         = selectableValues.size - 2,
                         modifier      = Modifier.fillMaxWidth()
                     )
                 }
