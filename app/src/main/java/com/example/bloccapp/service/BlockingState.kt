@@ -30,4 +30,9 @@ object BlockingState {
     fun revokeUnlock(packageName: String) {
         unlocks.remove(packageName)
     }
+
+    /** Rimuove tutti gli sblocchi temporanei (es. al cambio di giorno). */
+    fun resetAll() {
+        unlocks.clear()
+    }
 }

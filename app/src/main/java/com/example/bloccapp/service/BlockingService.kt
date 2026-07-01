@@ -53,6 +53,8 @@ class BlockingService : Service() {
 
     /** Package bloccato al tick precedente. */
     private var lastBlockedPackage: String? = null
+    /** Ultimo package rilevato in primo piano (anche se non bloccato). */
+    private var lastKnownForegroundPackage: String? = null
     /** Timestamp dell'ultimo lancio dell'activity di blocco (ms). */
     private var lastLaunchTimestamp = 0L
 
@@ -62,6 +64,9 @@ class BlockingService : Service() {
 
     /** Cache notifiche inviate. */
     private val sentNotifications = mutableMapOf<String, Boolean>()
+
+    /** Giorno dell'anno dell'ultimo controllo per il reset a mezzanotte. */
+    private var lastCheckDayOfYear = -1
 
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -120,6 +125,7 @@ class BlockingService : Service() {
         scope.launch {
             while (true) {
                 try {
+                    checkDayChange()
                     checkForegroundApp()
                     checkPreActivationNotifications()
                 } catch (e: Exception) {
@@ -130,8 +136,44 @@ class BlockingService : Service() {
         }
     }
 
+    private fun checkDayChange() {
+        val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        if (lastCheckDayOfYear != -1 && currentDay != lastCheckDayOfYear) {
+            Log.i(TAG, "New day detected! Resetting daily stats and temporary unlocks.")
+            usageCacheTimestamp = 0L
+            sentNotifications.clear()
+            BlockingState.resetAll()
+            
+            // Premia l'utente per i blocchi attivi mantenuti
+            awardDailyPoints()
+        }
+        lastCheckDayOfYear = currentDay
+    }
+
+    private fun awardDailyPoints() {
+        scope.launch {
+            val enabledCount = enabledBlocks.size
+            if (enabledCount > 0) {
+                val points = enabledCount * 15
+                try {
+                    db?.gamificationHistoryDao()?.insert(
+                        com.example.bloccapp.data.db.entity.GamificationHistory(
+                            points = points,
+                            timestamp = System.currentTimeMillis(),
+                            description = "Traguardo giornaliero: $enabledCount blocchi rispettati"
+                        )
+                    )
+                    Log.d(TAG, "Awarded $points points for $enabledCount active blocks")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to award daily points", e)
+                }
+            }
+        }
+    }
+
     private suspend fun checkForegroundApp() {
-        val currentPkg = getForegroundPackage() ?: return
+        val currentPkg = getForegroundPackage() ?: lastKnownForegroundPackage ?: return
+        lastKnownForegroundPackage = currentPkg
         val now = System.currentTimeMillis()
 
         // Se siamo noi, non facciamo nulla e non resettiamo lastBlockedPackage
@@ -190,44 +232,59 @@ class BlockingService : Service() {
 
         for (bwa in enabledBlocks) {
             val block = bwa.block
-            if (block.scheduleType != "TIME_SLOT") continue
-
-            try {
-                val (sh, sm) = block.scheduleStartTime.split(":").map { it.toInt() }
-                val targetCal = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, sh)
-                    set(Calendar.MINUTE, sm)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-
-                // Se l'orario è già passato oggi, consideriamo l'orario di domani
-                if (targetCal.timeInMillis < now - 10_000L) { // tolleranza 10s per non saltare trigger istantanei
-                    targetCal.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                val diffSeconds = (targetCal.timeInMillis - now) / 1000
-
-                // Log periodico ogni 10 secondi per non intasare, se entro 1 ora
-                if (diffSeconds in 0..3600 && (diffSeconds % 10 == 0L)) {
-                    Log.d(TAG, "DEBUG: Block '${block.name}' (${block.scheduleStartTime}) starts in $diffSeconds seconds")
-                }
-
-                val thresholds = listOf(300, 60, 30)
-
-                for (t in thresholds) {
-                    // Finestra di 5 secondi per intercettare il tick
-                    if (diffSeconds in (t - 5)..t) {
-                        val notificationKey = "${block.id}_${dateKey}_$t"
-                        if (sentNotifications[notificationKey] != true) {
-                            Log.i(TAG, "!!! TRIGGER !!! Sending $t seconds notification for '${block.name}'")
-                            sendPreActivationNotification(block.name, t)
-                            sentNotifications[notificationKey] = true
+            
+            val diffSeconds: Long = when (block.scheduleType) {
+                "TIME_SLOT" -> {
+                    try {
+                        val (sh, sm) = block.scheduleStartTime.split(":").map { it.toInt() }
+                        val targetCal = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, sh)
+                            set(Calendar.MINUTE, sm)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
                         }
+
+                        // Se l'orario è già passato oggi, consideriamo l'orario di domani
+                        if (targetCal.timeInMillis < now - 10_000L) {
+                            targetCal.add(Calendar.DAY_OF_YEAR, 1)
+                        }
+                        (targetCal.timeInMillis - now) / 1000
+                    } catch (e: Exception) {
+                        -1L
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error calculating pre-activation for block ${block.name}", e)
+                "DAILY_USAGE" -> {
+                    val limitMs = block.dailyUsageLimitMinutes * 60_000L
+                    val stats = getOrRefreshUsageCache()
+                    // Calcola il massimo utilizzo tra le app in questo blocco
+                    val maxUsageMs = bwa.apps.maxOfOrNull { app ->
+                        stats.find { it.packageName == app.packageName }?.totalTimeInForeground ?: 0L
+                    } ?: 0L
+                    
+                    if (maxUsageMs >= limitMs) -1L else (limitMs - maxUsageMs) / 1000
+                }
+                else -> -1L
+            }
+
+            if (diffSeconds < 0) continue
+
+            // Log periodico ogni 10 secondi per non intasare, se entro 1 ora
+            if (diffSeconds in 0..3600 && (diffSeconds % 10 == 0L)) {
+                Log.d(TAG, "DEBUG: Block '${block.name}' (${block.scheduleType}) starts in $diffSeconds seconds")
+            }
+
+            val thresholds = listOf(300, 60, 30)
+
+            for (t in thresholds) {
+                // Finestra di 8 secondi per intercettare il tick più agevolmente
+                if (diffSeconds in (t - 8)..t) {
+                    val notificationKey = "${block.id}_${dateKey}_$t"
+                    if (sentNotifications[notificationKey] != true) {
+                        Log.i(TAG, "!!! TRIGGER !!! Sending $t seconds notification for '${block.name}'")
+                        sendPreActivationNotification(block.name, t)
+                        sentNotifications[notificationKey] = true
+                    }
+                }
             }
         }
     }
@@ -271,6 +328,8 @@ class BlockingService : Service() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             ?: return null
         val now = System.currentTimeMillis()
+        
+        // Cerchiamo eventi molto recenti (3s)
         val events = usm.queryEvents(now - 3_000L, now)
         val event  = UsageEvents.Event()
         var lastPkg: String? = null
@@ -280,6 +339,19 @@ class BlockingService : Service() {
                 lastPkg = event.packageName
             }
         }
+        
+        // Se non ci sono eventi recenti, ma non abbiamo ancora un "ultimo conosciuto", 
+        // facciamo una ricerca più profonda (es. 1 ora) per inizializzare lo stato.
+        if (lastPkg == null && lastKnownForegroundPackage == null) {
+            val deepEvents = usm.queryEvents(now - 3_600_000L, now)
+            while (deepEvents.hasNextEvent()) {
+                deepEvents.getNextEvent(event)
+                if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    lastPkg = event.packageName
+                }
+            }
+        }
+
         return lastPkg
     }
 
