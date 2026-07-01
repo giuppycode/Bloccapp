@@ -398,7 +398,7 @@ private fun PinUnlockCard(pinHash: String, onUnlocked: () -> Unit) {
                 enabled  = pinInput.length == 4,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Conferma PIN")
+                Text("Conferma PIN (per 5 min)")
             }
         }
     }
@@ -453,7 +453,7 @@ private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
             ) {
                 Icon(Icons.Default.CameraAlt, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Apri fotocamera")
+                Text("Apri fotocamera (per 5 min)")
             }
         }
     }
@@ -504,7 +504,7 @@ private fun BiometricUnlockCard(onUnlocked: () -> Unit) {
             ) {
                 Icon(Icons.Default.Fingerprint, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Sblocca ora")
+                Text("Sblocca ora (per 5 min)")
             }
         }
     }
