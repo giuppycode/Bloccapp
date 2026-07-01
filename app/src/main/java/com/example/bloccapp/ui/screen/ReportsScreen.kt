@@ -49,8 +49,6 @@ fun ReportsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Spacer(Modifier.height(4.dp)) }
-
             items(weeks) { week ->
                 WeekReportCard(week = week, onClick = { onWeekClick(week.label) })
             }

@@ -135,8 +135,6 @@ fun DailyUsageScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement   = Arrangement.spacedBy(12.dp)
             ) {
-                item { Spacer(Modifier.height(4.dp)) }
-
                 // ── Filter chips ─────────────────────────────────────────────
                 item {
                     UsageFilterRow(

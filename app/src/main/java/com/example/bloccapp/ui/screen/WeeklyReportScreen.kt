@@ -97,8 +97,6 @@ fun WeeklyReportScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
             // ── Filter chips ──────────────────────────────────────────────────
             WeeklyFilterRow(
                 activeFilter     = activeFilter,

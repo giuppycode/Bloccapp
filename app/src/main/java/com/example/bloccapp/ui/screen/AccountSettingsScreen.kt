@@ -83,8 +83,6 @@ fun AccountSettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
             // ── Account section ───────────────────────────────────────────────
             SectionLabel("Account")
             Card(
