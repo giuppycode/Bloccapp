@@ -1,4 +1,3 @@
 - mappa per il blocco in luogo
-- verificare se a 00 vengono resettati i blocchi di utilizzo
-- testing dell'account su db
-- - aggiornare filtri in weekly report per i totali e medie
+- testing dell'account e dei dati dei giorni settimane vengono salvati su db locale
+- optional: migliorare grafico
