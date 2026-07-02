@@ -50,9 +50,11 @@ class MainActivity : AppCompatActivity() {
      * (PACKAGE_USAGE_STATS e SYSTEM_ALERT_WINDOW) sono stati concessi.
      */
     private fun maybeStartBlockingService() {
-        if (PermissionManager.hasUsageStatsPermission(this) &&
-            PermissionManager.hasOverlayPermission(this)
-        ) {
+        val hasUsage = PermissionManager.hasUsageStatsPermission(this)
+        val hasOverlay = PermissionManager.hasOverlayPermission(this)
+        android.util.Log.d("MainActivity", "maybeStartBlockingService: hasUsage=$hasUsage, hasOverlay=$hasOverlay")
+        if (hasUsage && hasOverlay) {
+            android.util.Log.d("MainActivity", "Starting BlockingService...")
             ContextCompat.startForegroundService(
                 this,
                 Intent(this, BlockingService::class.java)
