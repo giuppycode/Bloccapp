@@ -98,73 +98,86 @@ fun BlocksScreen(
     onAddBlock: () -> Unit,
     vm: BlocksViewModel = viewModel()
 ) {
-    val allBlocks by vm.allBlocks.collectAsStateWithLifecycle()
+    val allBlocks   by vm.allBlocks.collectAsStateWithLifecycle()
     val totalPoints by vm.totalPoints.collectAsStateWithLifecycle()
     
     val blocked    = allBlocks.filter { it.block.isEnabled }
     val notBlocked = allBlocks.filter { !it.block.isEnabled }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Blocks", fontWeight = FontWeight.Bold) })
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddBlock) {
                 Icon(Icons.Default.Add, contentDescription = "Aggiungi blocco")
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // ── Gamification Header ──────────────────────────────────────────
-            item {
+            // ── Sezione Globale: Gamification ────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
                 GamificationHeader(points = totalPoints)
-                Spacer(Modifier.height(8.dp))
             }
 
-            if (notBlocked.isNotEmpty()) {
-                item {
-                    Text(
-                        text  = "Not blocked",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
-                }
-                items(notBlocked) { bwa ->
-                    BlockItem(
-                        bwa      = bwa,
-                        onToggle = { vm.toggleBlock(bwa.block) },
-                        onDelete = { vm.deleteBlock(bwa.block) }
-                    )
-                }
-            }
+            // ── Titolo Sezione Blocchi ───────────────────────────────────────
+            Text(
+                text = "Blocks",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
-            if (blocked.isNotEmpty()) {
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text  = "Blocked",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (notBlocked.isNotEmpty()) {
+                    item {
+                        Text(
+                            text  = "Not blocked",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
+                    items(notBlocked) { bwa ->
+                        BlockItem(
+                            bwa      = bwa,
+                            onToggle = { vm.toggleBlock(bwa.block) },
+                            onDelete = { vm.deleteBlock(bwa.block) }
+                        )
+                    }
                 }
-                items(blocked) { bwa ->
-                    BlockItem(
-                        bwa      = bwa,
-                        onToggle = { vm.toggleBlock(bwa.block) },
-                        onDelete = { vm.deleteBlock(bwa.block) }
-                    )
-                }
-            }
 
-            item { Spacer(Modifier.height(88.dp)) }
+                if (blocked.isNotEmpty()) {
+                    item {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text  = "Blocked",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
+                    items(blocked) { bwa ->
+                        BlockItem(
+                            bwa      = bwa,
+                            onToggle = { vm.toggleBlock(bwa.block) },
+                            onDelete = { vm.deleteBlock(bwa.block) }
+                        )
+                    }
+                }
+
+                item { Spacer(Modifier.height(88.dp)) }
+            }
         }
     }
 }
@@ -192,7 +205,7 @@ private fun GamificationHeader(points: Int) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -210,12 +223,12 @@ private fun GamificationHeader(points: Int) {
                         text = "Livello $level",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                     Text(
                         text = nickname,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
 
@@ -223,7 +236,7 @@ private fun GamificationHeader(points: Int) {
                     text = "$points PT",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
 
@@ -234,13 +247,13 @@ private fun GamificationHeader(points: Int) {
                         .fillMaxWidth()
                         .height(10.dp)
                         .clip(CircleShape),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.tertiary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
                 Text(
                     text = "$expInLevel / 100 EXP per il prossimo livello",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
                     textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth()
                 )
