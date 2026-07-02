@@ -1,3 +1,2 @@
-- mappa per il blocco in luogo
 - testing dell'account e dei dati dei giorni settimane vengono salvati su db locale
 - optional: migliorare grafico

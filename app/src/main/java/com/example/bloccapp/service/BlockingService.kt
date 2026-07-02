@@ -50,6 +50,7 @@ class BlockingService : Service() {
 
     private var db: AppDatabase? = null
     private var enabledBlocks: List<BlockWithApps> = emptyList()
+    private var geofenceManager: GeofenceManager? = null
 
     /** Package bloccato al tick precedente. */
     private var lastBlockedPackage: String? = null
@@ -75,6 +76,7 @@ class BlockingService : Service() {
     override fun onCreate() {
         super.onCreate()
         db = AppDatabase.getInstance(applicationContext)
+        geofenceManager = GeofenceManager(applicationContext)
         createNotificationChannels()
         startForeground(NOTIFICATION_ID, buildForegroundNotification())
         collectBlocks()
@@ -108,10 +110,23 @@ class BlockingService : Service() {
     private fun collectBlocks() {
         scope.launch {
             db?.blockDao()?.getEnabledBlocksWithApps()?.collect { blocks ->
+                // Rileva blocchi rimossi o disabilitati per togliere le geofence
+                val currentEnabledIds = blocks.map { it.block.id }.toSet()
+                enabledBlocks.forEach { old ->
+                    if (old.block.scheduleType == "LOCATION" && !currentEnabledIds.contains(old.block.id)) {
+                        geofenceManager?.removeGeofence(old.block.id)
+                    }
+                }
+                
                 enabledBlocks = blocks
                 Log.d(TAG, "Loaded ${blocks.size} enabled blocks:")
                 blocks.forEach { bwa ->
                     Log.d(TAG, "  - Block: ${bwa.block.name}, Type: ${bwa.block.scheduleType}, Start: ${bwa.block.scheduleStartTime}")
+                    
+                    // Registra geofence se di tipo LOCATION
+                    if (bwa.block.scheduleType == "LOCATION") {
+                        geofenceManager?.addGeofence(bwa.block)
+                    }
                 }
             }
         }
@@ -366,6 +381,7 @@ class BlockingService : Service() {
             "TIME_SLOT"   -> isCurrentTimeInSlot(block.scheduleStartTime, block.scheduleEndTime)
             "DAILY_USAGE" -> isDailyUsageLimitReached(bwa)
             "DAILY_OPENS" -> isDailyOpensLimitReached(bwa)
+            "LOCATION"    -> BlockingState.isGeofenceActive(block.id)
             else          -> false
         }
     }

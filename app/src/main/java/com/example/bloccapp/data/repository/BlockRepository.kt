@@ -50,7 +50,10 @@ class BlockRepository(private val dao: BlockDao) {
             unlockQrSecret          = unlock.qrSecret,
             unlockPin               = unlock.pin,
             unlockPinHash           = unlock.pinHash,
-            unlockBiometric         = unlock.biometric
+            unlockBiometric         = unlock.biometric,
+            geofenceLat             = schedule.lat,
+            geofenceLng             = schedule.lng,
+            geofenceRadius          = schedule.radius
         )
         val blockId = dao.insertBlock(block)
         packages.forEach { pkg ->
@@ -83,7 +86,10 @@ class BlockRepository(private val dao: BlockDao) {
             unlockQrSecret          = unlock.qrSecret,
             unlockPin               = unlock.pin,
             unlockPinHash           = unlock.pinHash,
-            unlockBiometric         = unlock.biometric
+            unlockBiometric         = unlock.biometric,
+            geofenceLat             = schedule.lat,
+            geofenceLng             = schedule.lng,
+            geofenceRadius          = schedule.radius
         )
         dao.updateBlock(updated)
         dao.deleteAppsForBlock(block.id)
@@ -110,7 +116,10 @@ class BlockRepository(private val dao: BlockDao) {
         startTime              = scheduleStartTime,
         endTime                = scheduleEndTime,
         dailyUsageLimitMinutes = dailyUsageLimitMinutes,
-        dailyOpenCountLimit    = dailyOpenCountLimit
+        dailyOpenCountLimit    = dailyOpenCountLimit,
+        lat                    = geofenceLat,
+        lng                    = geofenceLng,
+        radius                 = geofenceRadius ?: 200f
     )
 
     /** Ricostruisce un [WhatConfig] dai campi del [Block]. */

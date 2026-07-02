@@ -31,6 +31,7 @@ import com.example.bloccapp.ui.screen.AppSelectionScreen
 import com.example.bloccapp.ui.screen.AuthScreen
 import com.example.bloccapp.ui.screen.BlocksScreen
 import com.example.bloccapp.ui.screen.DailyUsageScreen
+import com.example.bloccapp.ui.screen.MapSelectionScreen
 import com.example.bloccapp.ui.screen.ReportsScreen
 import com.example.bloccapp.ui.screen.WeeklyReportScreen
 import com.example.bloccapp.ui.viewmodel.AddBlockViewModel
@@ -131,6 +132,39 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
                         ?.savedStateHandle
                         ?.set("initial_packages", ArrayList(currentPkgs))
                     navController.navigate(Screen.AppSelection.route)
+                },
+                onSelectLocation = { lat, lng, radius ->
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("initial_lat", lat)
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("initial_lng", lng)
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("initial_radius", radius)
+                    navController.navigate(Screen.MapSelection.route)
+                }
+            )
+        }
+
+        // ── Map Selection (sub-screen) ────────────────────────────────────────
+        composable(Screen.MapSelection.route) {
+            val prevEntry = navController.previousBackStackEntry
+            val initialLat = prevEntry?.savedStateHandle?.get<Double>("initial_lat")
+            val initialLng = prevEntry?.savedStateHandle?.get<Double>("initial_lng")
+            val initialRadius = prevEntry?.savedStateHandle?.get<Float>("initial_radius") ?: 200f
+
+            MapSelectionScreen(
+                initialLat = initialLat,
+                initialLng = initialLng,
+                initialRadius = initialRadius,
+                onBack = { navController.popBackStack() },
+                onConfirm = { lat, lng, radius ->
+                    prevEntry?.savedStateHandle?.set("selected_lat", lat)
+                    prevEntry?.savedStateHandle?.set("selected_lng", lng)
+                    prevEntry?.savedStateHandle?.set("selected_radius", radius)
+                    navController.popBackStack()
                 }
             )
         }

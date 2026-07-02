@@ -54,4 +54,40 @@ object PermissionManager {
             true // Permission granted by default on older versions
         }
     }
+
+    fun hasLocationPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun hasBackgroundLocationPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    fun requestLocationPermission(activity: android.app.Activity, requestCode: Int) {
+        androidx.core.app.ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+            requestCode
+        )
+    }
+
+    fun requestBackgroundLocationPermission(activity: android.app.Activity, requestCode: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            androidx.core.app.ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                requestCode
+            )
+        }
+    }
 }

@@ -12,11 +12,20 @@ import com.example.bloccapp.service.BlockingService
 import com.example.bloccapp.ui.navigation.AppNavGraph
 import com.example.bloccapp.ui.theme.BloccappTheme
 import com.example.bloccapp.ui.viewmodel.ThemeViewModel
+import org.osmdroid.config.Configuration
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Configurazione OpenStreetMap
+        Configuration.getInstance().load(
+            applicationContext,
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        )
+        Configuration.getInstance().userAgentValue = packageName
+
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
             val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()

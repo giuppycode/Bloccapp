@@ -29,6 +29,9 @@ sealed class Screen(val route: String) {
     /** Selezione app da aggiungere a un blocco. */
     object AppSelection : Screen("app_selection")
 
+    /** Selezione posizione geografica per un blocco. */
+    object MapSelection : Screen("map_selection")
+
     /** Report dettagliato di una settimana. Parametro: weekLabel (URL-encoded). */
     object WeeklyReport : Screen("weekly_report/{weekLabel}") {
         const val ARG = "weekLabel"

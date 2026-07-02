@@ -22,11 +22,15 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT
         ) {
             val isActive = geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER
+            val transitionType = if (isActive) "ENTER" else "EXIT"
+            
             geofencingEvent.triggeringGeofences?.forEach { geofence ->
                 val blockId = geofence.requestId.toLongOrNull() ?: return@forEach
                 BlockingState.setGeofenceActive(blockId, isActive)
-                Log.i("GeofenceReceiver", "Block $blockId geofence active: $isActive")
+                Log.i("GeofenceReceiver", "Transition $transitionType detected for block $blockId. Active: $isActive")
             }
+        } else {
+            Log.w("GeofenceReceiver", "Unknown transition type: $geofenceTransition")
         }
     }
 }

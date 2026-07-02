@@ -14,9 +14,20 @@ object BlockingState {
     /** packageName → epoch ms di scadenza dell'unlock temporaneo */
     private val unlocks = ConcurrentHashMap<String, Long>()
 
+    /** set di blockId che sono attualmente attivi geograficamente */
+    private val activeGeofenceBlocks = ConcurrentHashMap.newKeySet<Long>()
+
     /** Restituisce true se il pacchetto è stato sbloccato temporaneamente e non è scaduto. */
     fun isTemporarilyUnlocked(packageName: String): Boolean =
         System.currentTimeMillis() < (unlocks[packageName] ?: 0L)
+
+    fun isGeofenceActive(blockId: Long): Boolean =
+        activeGeofenceBlocks.contains(blockId)
+
+    fun setGeofenceActive(blockId: Long, active: Boolean) {
+        if (active) activeGeofenceBlocks.add(blockId)
+        else activeGeofenceBlocks.remove(blockId)
+    }
 
     /**
      * Concede un unlock temporaneo al pacchetto per [durationMs] millisecondi.

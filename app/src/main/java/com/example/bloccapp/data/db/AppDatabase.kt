@@ -33,7 +33,7 @@ import com.example.bloccapp.data.db.entity.GamificationHistory
         BlockApp::class,
         BlockEvent::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,6 +46,15 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        /** Migrazione 4→5: aggiunge campi geofence alla tabella blocks. */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `blocks` ADD COLUMN `geofenceLat` REAL")
+                db.execSQL("ALTER TABLE `blocks` ADD COLUMN `geofenceLng` REAL")
+                db.execSQL("ALTER TABLE `blocks` ADD COLUMN `geofenceRadius` REAL")
+            }
+        }
 
         /** Migrazione 1→2: aggiunge le tabelle blocks e block_apps (schema originale). */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -149,7 +158,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "bloccapp.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { INSTANCE = it }
             }

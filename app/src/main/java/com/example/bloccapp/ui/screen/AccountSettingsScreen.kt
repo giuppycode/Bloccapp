@@ -177,8 +177,22 @@ private fun PermissionsCard(vm: AccountSettingsViewModel) {
     val usageGranted   by vm.usagePermissionGranted.collectAsStateWithLifecycle()
     val overlayGranted by vm.overlayPermissionGranted.collectAsStateWithLifecycle()
     val notifyGranted  by vm.notificationsPermissionGranted.collectAsStateWithLifecycle()
+    val locationGranted by vm.locationPermissionGranted.collectAsStateWithLifecycle()
+    val bgLocationGranted by vm.backgroundLocationPermissionGranted.collectAsStateWithLifecycle()
 
     val notifyLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        vm.refreshPermissions()
+    }
+
+    val locationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        vm.refreshPermissions()
+    }
+
+    val bgLocationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { _ ->
         vm.refreshPermissions()
@@ -217,6 +231,27 @@ private fun PermissionsCard(vm: AccountSettingsViewModel) {
                     }
                 }
             )
+            PermissionRow(
+                label     = "Posizione (richiesta per blocco area)",
+                granted   = locationGranted,
+                onRequest = {
+                    locationLauncher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ))
+                }
+            )
+            if (locationGranted) {
+                PermissionRow(
+                    label     = "Posizione in background (sempre)",
+                    granted   = bgLocationGranted,
+                    onRequest = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            bgLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        }
+                    }
+                )
+            }
         }
     }
 }

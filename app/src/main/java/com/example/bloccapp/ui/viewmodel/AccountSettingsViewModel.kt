@@ -34,11 +34,19 @@ class AccountSettingsViewModel(application: Application) : AndroidViewModel(appl
     private val _notificationsPermissionGranted = MutableStateFlow(PermissionManager.hasNotificationsPermission(application))
     val notificationsPermissionGranted = _notificationsPermissionGranted.asStateFlow()
 
+    private val _locationPermissionGranted = MutableStateFlow(PermissionManager.hasLocationPermission(application))
+    val locationPermissionGranted = _locationPermissionGranted.asStateFlow()
+
+    private val _backgroundLocationPermissionGranted = MutableStateFlow(PermissionManager.hasBackgroundLocationPermission(application))
+    val backgroundLocationPermissionGranted = _backgroundLocationPermissionGranted.asStateFlow()
+
     fun refreshPermissions() {
         val app = getApplication<Application>()
         _usagePermissionGranted.value = PermissionManager.hasUsageStatsPermission(app)
         _overlayPermissionGranted.value = PermissionManager.hasOverlayPermission(app)
         _notificationsPermissionGranted.value = PermissionManager.hasNotificationsPermission(app)
+        _locationPermissionGranted.value = PermissionManager.hasLocationPermission(app)
+        _backgroundLocationPermissionGranted.value = PermissionManager.hasBackgroundLocationPermission(app)
     }
 
     fun setTheme(mode: ThemeMode) {

@@ -4,8 +4,8 @@ package com.example.bloccapp.data.model
 // Modelli del form di creazione/modifica di un blocco
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Tipo di vincolo orario per un blocco. */
-enum class ScheduleType { NONE, TIME_SLOT, DAILY_USAGE, DAILY_OPENS }
+/** Tipo di vincolo orario o geografico per un blocco. */
+enum class ScheduleType { NONE, TIME_SLOT, DAILY_USAGE, DAILY_OPENS, LOCATION }
 
 /**
  * Configurazione di "quando bloccare".
@@ -15,13 +15,19 @@ enum class ScheduleType { NONE, TIME_SLOT, DAILY_USAGE, DAILY_OPENS }
  * @param endTime                Ora di fine (formato "HH:mm"), usato solo per [ScheduleType.TIME_SLOT]
  * @param dailyUsageLimitMinutes Minuti massimi di utilizzo al giorno, per [ScheduleType.DAILY_USAGE]
  * @param dailyOpenCountLimit    Numero massimo di aperture al giorno, per [ScheduleType.DAILY_OPENS]
+ * @param lat                    Latitudine centro area, per [ScheduleType.LOCATION]
+ * @param lng                    Longitudine centro area, per [ScheduleType.LOCATION]
+ * @param radius                 Raggio area in metri, per [ScheduleType.LOCATION]
  */
 data class ScheduleConfig(
     val type: ScheduleType = ScheduleType.NONE,
     val startTime: String = "09:00",
     val endTime: String = "17:00",
     val dailyUsageLimitMinutes: Int = 60,
-    val dailyOpenCountLimit: Int = 5
+    val dailyOpenCountLimit: Int = 5,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val radius: Float = 200f
 ) {
     /** Testo riepilogativo leggibile per la UI. */
     fun displayText(): String = when (type) {
@@ -29,6 +35,7 @@ data class ScheduleConfig(
         ScheduleType.TIME_SLOT   -> "$startTime – $endTime"
         ScheduleType.DAILY_USAGE -> "Max $dailyUsageLimitMinutes min/day"
         ScheduleType.DAILY_OPENS -> "Max $dailyOpenCountLimit opens/day"
+        ScheduleType.LOCATION    -> "Blocco in un'area"
     }
 }
 

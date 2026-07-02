@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,15 +44,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,18 +56,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.bloccapp.PermissionManager
 import com.example.bloccapp.data.model.ScheduleConfig
 import com.example.bloccapp.data.model.ScheduleType
 import com.example.bloccapp.data.model.UnlockConfig
 import com.example.bloccapp.data.model.WhatConfig
 import com.example.bloccapp.ui.viewmodel.AddBlockViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBlockScreen(
     onBack: () -> Unit,
     onSelectApps: (currentPackages: List<String>) -> Unit,
+    onSelectLocation: (lat: Double?, lng: Double?, radius: Float) -> Unit,
     vm: AddBlockViewModel = viewModel()
 ) {
     val blockName        by vm.blockName.collectAsStateWithLifecycle()
@@ -81,6 +83,37 @@ fun AddBlockScreen(
     val saved            by vm.saved.collectAsStateWithLifecycle()
 
     var showWhenSheet by remember { mutableStateOf(false) }
+
+    // Launcher per i permessi di posizione
+    val locationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val fineGranted = results[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        if (fineGranted) {
+            onSelectLocation(schedule.lat, schedule.lng, schedule.radius)
+        }
+    }
+
+    // Leggi posizione tornata dal MapSelectionScreen tramite SavedStateHandle
+    val backStackEntry = (androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner.current as? androidx.navigation.NavBackStackEntry)
+    val returnedLat = backStackEntry?.savedStateHandle?.get<Double>("selected_lat")
+    val returnedLng = backStackEntry?.savedStateHandle?.get<Double>("selected_lng")
+    val returnedRadius = backStackEntry?.savedStateHandle?.get<Float>("selected_radius")
+
+    LaunchedEffect(returnedLat, returnedLng, returnedRadius) {
+        if (returnedLat != null && returnedLng != null && returnedRadius != null) {
+            vm.setSchedule(schedule.copy(
+                lat = returnedLat,
+                lng = returnedLng,
+                radius = returnedRadius,
+                type = ScheduleType.LOCATION
+            ))
+            // Pulisci per non ri-triggerare al recompose
+            backStackEntry.savedStateHandle.remove<Double>("selected_lat")
+            backStackEntry.savedStateHandle.remove<Double>("selected_lng")
+            backStackEntry.savedStateHandle.remove<Float>("selected_radius")
+        }
+    }
 
     LaunchedEffect(saved) { if (saved) onBack() }
 
@@ -136,8 +169,25 @@ fun AddBlockScreen(
             FormRowNavigable(
                 label   = "When to block",
                 value   = schedule.displayText(),
-                onClick = { showWhenSheet = true }
+                onClick = {
+                    if (schedule.type == ScheduleType.LOCATION) {
+                        onSelectLocation(schedule.lat, schedule.lng, schedule.radius)
+                    } else {
+                        showWhenSheet = true
+                    }
+                }
             )
+
+            // ── Reset to generic if needed ───────────────────────────────────
+            if (schedule.type == ScheduleType.LOCATION) {
+                Button(
+                    onClick = { showWhenSheet = true },
+                    colors = ButtonDefaults.textButtonColors(),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("Change restriction type")
+                }
+            }
 
             // ── What to block ─────────────────────────────────────────────────
             WhatToBlockSection(config = whatConfig, onUpdate = { vm.setWhatConfig(it) })
@@ -161,10 +211,23 @@ fun AddBlockScreen(
 
     // ── ModalBottomSheet "When to block" ──────────────────────────────────────
     if (showWhenSheet) {
+        val currentContext = LocalContext.current
         WhenToBlockSheet(
             schedule  = schedule,
             onDismiss = { showWhenSheet = false },
-            onConfirm = { vm.setSchedule(it); showWhenSheet = false }
+            onConfirm = { vm.setSchedule(it); showWhenSheet = false },
+            onSelectLocation = {
+                showWhenSheet = false
+                if (PermissionManager.hasLocationPermission(currentContext)) {
+                    onSelectLocation(schedule.lat, schedule.lng, schedule.radius)
+                } else {
+                    locationLauncher.launch(arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ))
+                }
+            },
+            locationPermissionLauncher = locationLauncher
         )
     }
 }
@@ -178,7 +241,9 @@ fun AddBlockScreen(
 private fun WhenToBlockSheet(
     schedule: ScheduleConfig,
     onDismiss: () -> Unit,
-    onConfirm: (ScheduleConfig) -> Unit
+    onConfirm: (ScheduleConfig) -> Unit,
+    onSelectLocation: () -> Unit,
+    locationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>
 ) {
     var local by remember { mutableStateOf(schedule) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -312,6 +377,26 @@ private fun WhenToBlockSheet(
                     )
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // Radio: Location (Geofencing)
+            val currentContext = LocalContext.current
+            ScheduleRadioRow(
+                label    = "Blocco in un'area (GPS)",
+                selected = local.type == ScheduleType.LOCATION,
+                onClick  = {
+                    if (PermissionManager.hasLocationPermission(currentContext)) {
+                        onConfirm(local.copy(type = ScheduleType.LOCATION))
+                        onSelectLocation()
+                    } else {
+                        locationPermissionLauncher.launch(arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ))
+                    }
+                }
+            )
 
             Spacer(Modifier.height(12.dp))
 

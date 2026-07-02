@@ -16,12 +16,17 @@ data class Block(
     val isEnabled: Boolean = true,
 
     // ── Quando bloccare ───────────────────────────────────────────────────────
-    /** Tipo di vincolo: "NONE" | "TIME_SLOT" | "DAILY_USAGE" | "DAILY_OPENS" */
+    /** Tipo di vincolo: "NONE" | "TIME_SLOT" | "DAILY_USAGE" | "DAILY_OPENS" | "LOCATION" */
     val scheduleType: String = "NONE",
     val scheduleStartTime: String = "09:00",
     val scheduleEndTime: String = "17:00",
     val dailyUsageLimitMinutes: Int = 60,
     val dailyOpenCountLimit: Int = 5,
+
+    // ── Geofencing (usato se scheduleType == "LOCATION") ──────────────────────
+    val geofenceLat: Double? = null,
+    val geofenceLng: Double? = null,
+    val geofenceRadius: Float? = null,
 
     // ── Cosa bloccare ─────────────────────────────────────────────────────────
     val blockAppStart: Boolean = true,
@@ -44,6 +49,7 @@ data class Block(
         "TIME_SLOT"   -> "$scheduleStartTime – $scheduleEndTime"
         "DAILY_USAGE" -> "Max $dailyUsageLimitMinutes min/day"
         "DAILY_OPENS" -> "Max $dailyOpenCountLimit opens/day"
+        "LOCATION"    -> "Blocco in area"
         else          -> ""
     }
 
