@@ -105,12 +105,25 @@ fun WeeklyReportScreen(
 
             // ── Totale + Media giornaliera ────────────────────────────────────
             if (week != null) {
-                val totalMs   = week.topApps.sumOf { it.totalTimeInForeground }
-                val dailyAvgMs = totalMs / 7L
-                val totalHours   = TimeUnit.MILLISECONDS.toHours(totalMs)
-                val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(totalMs) % 60
-                val avgHours     = TimeUnit.MILLISECONDS.toHours(dailyAvgMs)
-                val avgMinutes   = TimeUnit.MILLISECONDS.toMinutes(dailyAvgMs) % 60
+                val (totalValue, avgValue, labelTotal, labelAvg) = when (activeFilter) {
+                    UsageFilter.SCREEN_TIME -> {
+                        val total = week.topApps.sumOf { it.totalTimeInForeground }
+                        val avg = total / 7L
+                        Triple(formatWeeklyDuration(total), formatWeeklyDuration(avg), "Utilizzo totale") to "Media giornaliera"
+                    }
+                    UsageFilter.TIMES_OPENED -> {
+                        val total = week.topApps.sumOf { it.launchCount.toLong() }
+                        val avg = total / 7f
+                        Triple("${total}x", "%.1fx".format(java.util.Locale.US, avg), "Totale aperture") to "Media aperture"
+                    }
+                    UsageFilter.NOTIFICATIONS -> {
+                        val total = week.topApps.sumOf { it.notificationCount.toLong() }
+                        val avg = total / 7f
+                        Triple("$total", "%.1f".format(java.util.Locale.US, avg), "Totale notifiche") to "Media notifiche"
+                    }
+                }.let { (triple, labelAvg) -> 
+                    listOf(triple.first, triple.second, triple.third, labelAvg) 
+                }
 
                 Card(
                     shape  = RoundedCornerShape(16.dp),
@@ -130,12 +143,12 @@ fun WeeklyReportScreen(
                         // Totale
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Utilizzo totale",
+                                labelTotal,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                "${totalHours}h ${totalMinutes}m",
+                                totalValue,
                                 style      = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color      = MaterialTheme.colorScheme.onPrimaryContainer
@@ -157,12 +170,12 @@ fun WeeklyReportScreen(
                             horizontalAlignment = Alignment.End
                         ) {
                             Text(
-                                "Media giornaliera",
+                                labelAvg,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                "${avgHours}h ${avgMinutes}m",
+                                avgValue,
                                 style      = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color      = MaterialTheme.colorScheme.onPrimaryContainer
