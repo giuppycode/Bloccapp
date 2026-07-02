@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.preference.ktx)
     implementation(libs.material)
     implementation(libs.androidx.appcompat)
 
@@ -73,6 +74,10 @@ dependencies {
     // ZXing core (QR code generation) + embedded scanner (QR scan via camera)
     implementation(libs.zxing.core)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    // OpenStreetMap & Location
+    implementation(libs.osmdroid.android)
+    implementation(libs.com.google.android.gms.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
