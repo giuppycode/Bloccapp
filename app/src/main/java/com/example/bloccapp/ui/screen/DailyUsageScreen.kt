@@ -128,6 +128,41 @@ fun DailyUsageScreen(
                 )
             }
         } else {
+            // Calcolo app ordinate e valore massimo in base al filtro
+            val sortedApps = remember(dailyData.apps, activeFilter) {
+                when (activeFilter) {
+                    UsageFilter.SCREEN_TIME   -> dailyData.apps.sortedByDescending { it.totalTimeInForeground }
+                    UsageFilter.TIMES_OPENED  -> dailyData.apps.sortedByDescending { it.launchCount }
+                    UsageFilter.NOTIFICATIONS -> dailyData.apps.sortedByDescending { it.notificationCount }
+                }
+            }
+
+            val maxValue = remember(sortedApps, activeFilter) {
+                when (activeFilter) {
+                    UsageFilter.SCREEN_TIME   -> sortedApps.firstOrNull()?.totalTimeInForeground?.coerceAtLeast(1L)?.toFloat() ?: 1f
+                    UsageFilter.TIMES_OPENED  -> sortedApps.firstOrNull()?.launchCount?.coerceAtLeast(1)?.toFloat() ?: 1f
+                    UsageFilter.NOTIFICATIONS -> sortedApps.firstOrNull()?.notificationCount?.coerceAtLeast(1)?.toFloat() ?: 1f
+                }
+            }
+
+            // Calcolo totale giornaliero in base al filtro
+            val (totalValueLabel, totalLabel) = remember(dailyData.apps, activeFilter) {
+                when (activeFilter) {
+                    UsageFilter.SCREEN_TIME -> {
+                        val total = dailyData.apps.sumOf { it.totalTimeInForeground }
+                        formatDuration(total) to "Tempo totale oggi"
+                    }
+                    UsageFilter.TIMES_OPENED -> {
+                        val total = dailyData.apps.sumOf { it.launchCount.toLong() }
+                        "${total}x" to "Aperture totali oggi"
+                    }
+                    UsageFilter.NOTIFICATIONS -> {
+                        val total = dailyData.apps.sumOf { it.notificationCount.toLong() }
+                        "$total" to "Notifiche totali oggi"
+                    }
+                }
+            }
+
             LazyColumn(
                 modifier              = Modifier
                     .fillMaxSize()
@@ -141,6 +176,27 @@ fun DailyUsageScreen(
                         activeFilter     = activeFilter,
                         onFilterSelected = { activeFilter = it }
                     )
+                }
+
+                // ── Daily Total Summary ──────────────────────────────────────
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = totalLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = totalValueLabel,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // ── Hourly bar chart ─────────────────────────────────────────
@@ -177,13 +233,11 @@ fun DailyUsageScreen(
                         )
                     }
 
-                    val maxMs = dailyData.apps.first().totalTimeInForeground.coerceAtLeast(1L)
-
                     items(
-                        items = dailyData.apps,
+                        items = sortedApps,
                         key   = { it.packageName }
                     ) { app ->
-                        AppUsageRow(app = app, maxMs = maxMs)
+                        AppUsageRow(app = app, filter = activeFilter, maxValue = maxValue)
                     }
                 }
 
@@ -340,7 +394,7 @@ private fun HourlyChartCard(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun AppUsageRow(app: AppUsageInfo, maxMs: Long) {
+private fun AppUsageRow(app: AppUsageInfo, filter: UsageFilter, maxValue: Float) {
     val context = LocalContext.current
 
     // Carica l'icona dell'app in modo asincrono
@@ -355,7 +409,20 @@ private fun AppUsageRow(app: AppUsageInfo, maxMs: Long) {
         }
     }
 
-    val fraction = (app.totalTimeInForeground.toFloat() / maxMs).coerceIn(0f, 1f)
+    val (fraction, valueLabel) = when (filter) {
+        UsageFilter.SCREEN_TIME -> {
+            val f = (app.totalTimeInForeground.toFloat() / maxValue).coerceIn(0f, 1f)
+            f to formatDuration(app.totalTimeInForeground)
+        }
+        UsageFilter.TIMES_OPENED -> {
+            val f = (app.launchCount.toFloat() / maxValue).coerceIn(0f, 1f)
+            f to "${app.launchCount}x"
+        }
+        UsageFilter.NOTIFICATIONS -> {
+            val f = (app.notificationCount.toFloat() / maxValue).coerceIn(0f, 1f)
+            f to "${app.notificationCount}"
+        }
+    }
 
     Column {
         Row(
@@ -410,9 +477,9 @@ private fun AppUsageRow(app: AppUsageInfo, maxMs: Long) {
 
             Spacer(Modifier.width(12.dp))
 
-            // ── Tempo hh:mm:ss ───────────────────────────────────────────────
+            // ── Valore filtrato ──────────────────────────────────────────────
             Text(
-                text  = formatDuration(app.totalTimeInForeground),
+                text  = valueLabel,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontFamily = FontFamily.Monospace
                 ),
