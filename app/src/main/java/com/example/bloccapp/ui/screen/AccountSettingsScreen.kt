@@ -72,7 +72,7 @@ fun AccountSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Account & Settings", fontWeight = FontWeight.Bold) })
+            TopAppBar(title = { Text("Account & Impostazioni", fontWeight = FontWeight.Bold) })
         }
     ) { innerPadding ->
         Column(
@@ -113,13 +113,13 @@ fun AccountSettingsScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Logout")
+                        Text("Esci")
                     }
                 }
             }
 
             // Impostazioni app
-            SectionLabel("App settings")
+            SectionLabel("Impostazioni app")
             Card(
                 shape    = RoundedCornerShape(16.dp),
                 colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),

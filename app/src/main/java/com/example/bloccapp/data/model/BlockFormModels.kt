@@ -33,8 +33,8 @@ data class ScheduleConfig(
     fun displayText(): String = when (type) {
         ScheduleType.NONE        -> ""
         ScheduleType.TIME_SLOT   -> "$startTime – $endTime"
-        ScheduleType.DAILY_USAGE -> "Max $dailyUsageLimitMinutes min/day"
-        ScheduleType.DAILY_OPENS -> "Max $dailyOpenCountLimit opens/day"
+        ScheduleType.DAILY_USAGE -> "Max $dailyUsageLimitMinutes min/giorno"
+        ScheduleType.DAILY_OPENS -> "Max $dailyOpenCountLimit avvii/giorno"
         ScheduleType.LOCATION    -> "Blocco in un'area"
     }
 }

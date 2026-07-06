@@ -120,7 +120,7 @@ fun AddBlockScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add block", fontWeight = FontWeight.Bold) },
+                title = { Text("Configura blocco", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
@@ -143,7 +143,7 @@ fun AddBlockScreen(
                 onValueChange = { vm.setBlockName(it) },
                 placeholder   = {
                     Text(
-                        "Block name",
+                        "Nome del blocco",
                         modifier  = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
@@ -160,14 +160,14 @@ fun AddBlockScreen(
 
             // App selezionate
             FormRowNavigable(
-                label   = "Selected apps",
+                label   = "App da bloccare",
                 value   = if (selectedPackages.isEmpty()) "" else "${selectedPackages.size} app selezionate",
                 onClick = { onSelectApps(selectedPackages) }
             )
 
             // Regole orarie/limiti
             FormRowNavigable(
-                label   = "When to block",
+                label   = "Quando bloccare",
                 value   = schedule.displayText(),
                 onClick = {
                     if (schedule.type == ScheduleType.LOCATION) {
@@ -185,7 +185,7 @@ fun AddBlockScreen(
                     colors = ButtonDefaults.textButtonColors(),
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("Change restriction type")
+                    Text("Cambia tipo di restrizione")
                 }
             }
 
@@ -199,7 +199,7 @@ fun AddBlockScreen(
 
             Button(
                 onClick  = { vm.saveBlock() },
-                enabled  = blockName.isNotBlank(),
+                enabled  = blockName.isNotBlank() && selectedPackages.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Salva blocco")
@@ -259,7 +259,7 @@ private fun WhenToBlockSheet(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                "When to block",
+                "Quando bloccare",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -268,7 +268,7 @@ private fun WhenToBlockSheet(
 
             // Radio: No restriction
             ScheduleRadioRow(
-                label    = "No restriction",
+                label    = "Senza restrizioni",
                 selected = local.type == ScheduleType.NONE,
                 onClick  = { local = local.copy(type = ScheduleType.NONE) }
             )
@@ -277,7 +277,7 @@ private fun WhenToBlockSheet(
 
             // Radio: Time slot
             ScheduleRadioRow(
-                label    = "Time slot (es. 9:00 – 17:00)",
+                label    = "Fascia oraria",
                 selected = local.type == ScheduleType.TIME_SLOT,
                 onClick  = { local = local.copy(type = ScheduleType.TIME_SLOT) }
             )
@@ -289,7 +289,7 @@ private fun WhenToBlockSheet(
                     OutlinedTextField(
                         value         = local.startTime,
                         onValueChange = { local = local.copy(startTime = it) },
-                        label         = { Text("From") },
+                        label         = { Text("Dalle") },
                         placeholder   = { Text("09:00") },
                         modifier      = Modifier.weight(1f),
                         singleLine    = true
@@ -297,7 +297,7 @@ private fun WhenToBlockSheet(
                     OutlinedTextField(
                         value         = local.endTime,
                         onValueChange = { local = local.copy(endTime = it) },
-                        label         = { Text("To") },
+                        label         = { Text("Alle") },
                         placeholder   = { Text("17:00") },
                         modifier      = Modifier.weight(1f),
                         singleLine    = true
@@ -309,7 +309,7 @@ private fun WhenToBlockSheet(
 
             // Radio: Daily usage limit
             ScheduleRadioRow(
-                label    = "Daily usage limit",
+                label    = "Limite utilizzo giornaliero",
                 selected = local.type == ScheduleType.DAILY_USAGE,
                 onClick  = { local = local.copy(type = ScheduleType.DAILY_USAGE) }
             )
@@ -331,7 +331,7 @@ private fun WhenToBlockSheet(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        "Max ${local.dailyUsageLimitMinutes} min/day",
+                        "Max ${local.dailyUsageLimitMinutes} min/giorno",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -352,7 +352,7 @@ private fun WhenToBlockSheet(
 
             // Radio: Daily open count
             ScheduleRadioRow(
-                label    = "Daily open count",
+                label    = "Numero avvii giornalieri",
                 selected = local.type == ScheduleType.DAILY_OPENS,
                 onClick  = { local = local.copy(type = ScheduleType.DAILY_OPENS) }
             )
@@ -362,7 +362,7 @@ private fun WhenToBlockSheet(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        "Max ${local.dailyOpenCountLimit} opens/day",
+                        "Max ${local.dailyOpenCountLimit} avvvii/giorno",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -419,7 +419,7 @@ private fun WhatToBlockSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "What to block",
+            "Cosa bloccare",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -427,7 +427,7 @@ private fun WhatToBlockSection(
             FilterChip(
                 selected     = config.appStart,
                 onClick      = { onUpdate(config.copy(appStart = !config.appStart)) },
-                label        = { Text("App start") },
+                label        = { Text("Avvio app") },
                 leadingIcon  = if (config.appStart) {
                     { Icon(Icons.Default.Block, null, Modifier.size(FilterChipDefaults.IconSize)) }
                 } else null
@@ -435,7 +435,7 @@ private fun WhatToBlockSection(
             FilterChip(
                 selected     = config.notifications,
                 onClick      = { onUpdate(config.copy(notifications = !config.notifications)) },
-                label        = { Text("Notifications") },
+                label        = { Text("Notifiche") },
                 leadingIcon  = if (config.notifications) {
                     { Icon(Icons.Default.NotificationsOff, null, Modifier.size(FilterChipDefaults.IconSize)) }
                 } else null
@@ -453,7 +453,7 @@ private fun HowToUnblockSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "How to unblock",
+            "Come sbloccare",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -471,7 +471,7 @@ private fun HowToUnblockSection(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        "Wait ${config.timerMinutes} seconds before unblocking",
+                        "Attendi ${config.timerMinutes} secondi prima dello sblocco",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -489,13 +489,13 @@ private fun HowToUnblockSection(
         // ── QR Code ──────────────────────────────────────────────────────────
         UnlockCard(
             icon    = Icons.Default.QrCode,
-            label   = "QR Code",
+            label   = "Codice QR",
             checked = config.qrCode,
             onToggle = { onUpdate(config.copy(qrCode = it)) }
         ) {
             if (config.qrCode) {
                 Text(
-                    "Un QR code verrà generato al salvataggio. Scansionarlo per sbloccare.",
+                    "Un codice QR verrà generato al salvataggio. Scansionalo per sbloccare.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -517,7 +517,7 @@ private fun HowToUnblockSection(
                         if (it.length <= 4 && it.all { c -> c.isDigit() })
                             onUpdate(config.copy(pinRaw = it))
                     },
-                    label               = { Text("4-digit PIN") },
+                    label               = { Text("PIN a 4 cifre") },
                     keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
                     modifier            = Modifier

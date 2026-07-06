@@ -188,7 +188,7 @@ fun WeeklyReportScreen(
         // Top apps
             if (week != null && week.topApps.isNotEmpty()) {
                 Text(
-                    "Top 5 apps",
+                    "Top 5 app utilizzate",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -222,7 +222,7 @@ fun WeeklyReportScreen(
 
         // Statistiche blocchi
             Text(
-                "Blocking stats",
+                "Statistiche dei blocchi",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -231,17 +231,17 @@ fun WeeklyReportScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 BlockingStatCard(
-                    title    = "App opens\nblocked",
+                    title    = "Aperture\nbloccate",
                     value    = week?.appsBlocked?.toString() ?: "\u2014",
                     modifier = Modifier.weight(1f)
                 )
                 BlockingStatCard(
-                    title    = "Notifications\nblocked",
+                    title    = "Notifiche\nbloccate",
                     value    = "\u2014",
                     modifier = Modifier.weight(1f)
                 )
                 BlockingStatCard(
-                    title    = "Times\npaused",
+                    title    = "Numero\npause",
                     value    = week?.timesPaused?.toString() ?: "\u2014",
                     modifier = Modifier.weight(1f)
                 )

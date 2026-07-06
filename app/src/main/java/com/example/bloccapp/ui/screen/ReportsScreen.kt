@@ -39,7 +39,7 @@ fun ReportsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Reports", fontWeight = FontWeight.Bold) })
+            TopAppBar(title = { Text("Report", fontWeight = FontWeight.Bold) })
         }
     ) { innerPadding ->
         LazyColumn(

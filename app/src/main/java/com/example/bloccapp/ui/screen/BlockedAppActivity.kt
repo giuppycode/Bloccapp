@@ -187,66 +187,66 @@ private fun BlockedAppScreen(
     onUnlocked: () -> Unit,
     onGoHome: () -> Unit
 ) {
-    val hasAnyUnlock = unlockTimer || unlockPin || unlockQr || unlockBiometric
+        val hasAnyUnlock = unlockTimer || unlockPin || unlockQr || unlockBiometric
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color    = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color    = MaterialTheme.colorScheme.background
         ) {
-            Spacer(Modifier.height(32.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Spacer(Modifier.height(32.dp))
 
     // Icona app bloccata
-            Surface(
-                shape  = CircleShape,
-                color  = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.size(80.dp)
-            ) {
-                Icon(
-                    imageVector        = Icons.Default.Block,
-                    contentDescription = null,
-                    tint               = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier           = Modifier
-                        .padding(16.dp)
-                        .fillMaxSize()
-                )
-            }
+                Surface(
+                    shape  = CircleShape,
+                    color  = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.Block,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier           = Modifier
+                            .padding(16.dp)
+                            .fillMaxSize()
+                    )
+                }
 
     // Header
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text       = appName,
-                    style      = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    textAlign  = TextAlign.Center
-                )
-                Text(
-                    text  = "è bloccata da \"$blockName\"",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text       = appName,
+                        style      = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign  = TextAlign.Center
+                    )
+                    Text(
+                        text  = "è bloccata da \"$blockName\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
     // Metodi di sblocco
-            if (hasAnyUnlock) {
-                Text(
-                    text       = "Per continuare, sblocca tramite:",
-                    style      = MaterialTheme.typography.labelMedium,
-                    color      = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+                if (hasAnyUnlock) {
+                    Text(
+                        text       = "Per continuare, sblocca tramite:",
+                        style      = MaterialTheme.typography.labelMedium,
+                        color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
 
             if (unlockTimer) {
                 TimerUnlockCard(
@@ -295,64 +295,64 @@ private fun BlockedAppScreen(
 
 // Timer
 
-@Composable
-private fun TimerUnlockCard(timerSecs: Int, onUnlocked: () -> Unit) {
-    var secondsLeft  by remember { mutableIntStateOf(timerSecs) }
-    var timerStarted by remember { mutableStateOf(false) }
-    var timerDone    by remember { mutableStateOf(false) }
+    @Composable
+    private fun TimerUnlockCard(timerSecs: Int, onUnlocked: () -> Unit) {
+        var secondsLeft  by remember { mutableIntStateOf(timerSecs) }
+        var timerStarted by remember { mutableStateOf(false) }
+        var timerDone    by remember { mutableStateOf(false) }
 
-    // Countdown once started
-    LaunchedEffect(timerStarted) {
-        if (!timerStarted) return@LaunchedEffect
-        while (secondsLeft > 0) {
-            delay(1_000L)
-            secondsLeft--
+        // Countdown once started
+        LaunchedEffect(timerStarted) {
+            if (!timerStarted) return@LaunchedEffect
+            while (secondsLeft > 0) {
+                delay(1_000L)
+                secondsLeft--
+            }
+            timerDone = true
         }
-        timerDone = true
-    }
 
-    UnlockCard(icon = Icons.Default.Timer, title = "Timer di attesa") {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (timerStarted && !timerDone) {
-                Text("Attendi ancora $secondsLeft secondi…", style = MaterialTheme.typography.bodyMedium)
-                CircularProgressIndicator(
-                    progress        = { secondsLeft.toFloat() / timerSecs.toFloat() },
-                    modifier        = Modifier.size(64.dp),
-                    strokeWidth     = 6.dp
-                )
-            } else if (!timerStarted) {
-                Text(
-                    "Devi attendere $timerSecs secondi prima di poter aprire questa app.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-                Button(
-                    onClick  = { timerStarted = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Timer, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Avvia il timer")
-                }
-            } else {
-                // Timer done
-                Text("Tempo scaduto — puoi aprire l'app.", style = MaterialTheme.typography.bodyMedium)
-                Button(
-                    onClick  = onUnlocked,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.LockOpen, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Apri per 5 minuti")
+        UnlockCard(icon = Icons.Default.Timer, title = "Timer di attesa") {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (timerStarted && !timerDone) {
+                    Text("Attendi ancora $secondsLeft secondi…", style = MaterialTheme.typography.bodyMedium)
+                    CircularProgressIndicator(
+                        progress        = { secondsLeft.toFloat() / timerSecs.toFloat() },
+                        modifier        = Modifier.size(64.dp),
+                        strokeWidth     = 6.dp
+                    )
+                } else if (!timerStarted) {
+                    Text(
+                        "Devi attendere $timerSecs secondi prima di poter aprire questa app.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Button(
+                        onClick  = { timerStarted = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Timer, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Avvia timer")
+                    }
+                } else {
+                    // Timer done
+                    Text("Tempo scaduto — puoi aprire l'app.", style = MaterialTheme.typography.bodyMedium)
+                    Button(
+                        onClick  = onUnlocked,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.LockOpen, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Apri (per 5 min)")
+                    }
                 }
             }
         }
     }
-}
 
 // PIN
 
@@ -395,56 +395,56 @@ private fun PinUnlockCard(pinHash: String, onUnlocked: () -> Unit) {
 
 // QR
 
-@Composable
-private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
-    var qrError by remember { mutableStateOf(false) }
-    val qrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        if (result.contents == qrSecret) {
-            onUnlocked()
-        } else if (result.contents != null) {
-            qrError = true
-        }
-    }
-
-    UnlockCard(icon = Icons.Default.QrCode, title = "QR Code") {
-        Column(
-            modifier            = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                "Inquadra il QR code di sblocco con la fotocamera.",
-                style     = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-
-            if (qrError) {
-                Text(
-                    "QR code non valido. Riprova.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
+    @Composable
+    private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
+        var qrError by remember { mutableStateOf(false) }
+        val qrLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+            if (result.contents == qrSecret) {
+                onUnlocked()
+            } else if (result.contents != null) {
+                qrError = true
             }
+        }
 
-            Button(
-                onClick = {
-                    qrError = false
-                    qrLauncher.launch(ScanOptions().apply {
-                        setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                        setPrompt("Scansiona il codice di sblocco")
-                        setBeepEnabled(true)
-                        setOrientationLocked(false)
-                    })
-                },
-                modifier = Modifier.fillMaxWidth()
+        UnlockCard(icon = Icons.Default.QrCode, title = "Codice QR") {
+            Column(
+                modifier            = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.CameraAlt, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Apri fotocamera (per 5 min)")
+                Text(
+                    "Inquadra il codice QR di sblocco con la fotocamera.",
+                    style     = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+
+                if (qrError) {
+                    Text(
+                        "Codice QR non valido. Riprova.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        qrError = false
+                        qrLauncher.launch(ScanOptions().apply {
+                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            setPrompt("Scansiona il codice di sblocco")
+                            setBeepEnabled(true)
+                            setOrientationLocked(false)
+                        })
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.CameraAlt, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Apri fotocamera (per 5 min)")
+                }
             }
         }
     }
-}
 
 // Biometrico
 

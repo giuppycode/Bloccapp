@@ -47,8 +47,8 @@ data class Block(
     /** Riepilogo leggibile della configurazione "quando bloccare". */
     fun scheduleDisplay(): String = when (scheduleType) {
         "TIME_SLOT"   -> "$scheduleStartTime – $scheduleEndTime"
-        "DAILY_USAGE" -> "Max $dailyUsageLimitMinutes min/day"
-        "DAILY_OPENS" -> "Max $dailyOpenCountLimit opens/day"
+        "DAILY_USAGE" -> "Max $dailyUsageLimitMinutes min/giorno"
+        "DAILY_OPENS" -> "Max $dailyOpenCountLimit avvii/giorno"
         "LOCATION"    -> "Blocco in area"
         else          -> ""
     }

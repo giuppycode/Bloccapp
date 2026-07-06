@@ -94,7 +94,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun logout() {
+    fun
+            logout() {
         viewModelScope.launch {
             prefsManager.logout()
         }

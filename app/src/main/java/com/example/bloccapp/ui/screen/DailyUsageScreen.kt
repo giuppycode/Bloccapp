@@ -72,9 +72,9 @@ import kotlinx.coroutines.withContext
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum class UsageFilter(val label: String) {
-    SCREEN_TIME("Screen Time"),
-    TIMES_OPENED("Launches"),
-    NOTIFICATIONS("Notifications")
+    SCREEN_TIME("Tempo schermo"),
+    TIMES_OPENED("Aperture"),
+    NOTIFICATIONS("Notifiche")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ fun DailyUsageScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Daily Usage", fontWeight = FontWeight.Bold) })
+            TopAppBar(title = { Text("Utilizzo oggi", fontWeight = FontWeight.Bold) })
         }
     ) { innerPadding ->
         if (!hasPerm) {
@@ -227,7 +227,7 @@ fun DailyUsageScreen(
                 } else {
                     item {
                         Text(
-                            text  = "App usage",
+                            text  = "Utilizzo app",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

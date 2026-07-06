@@ -103,12 +103,12 @@ fun AuthScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            PrimaryTabRow(selectedTabIndex = selectedTab, modifier = Modifier.fillMaxWidth()) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 },
-                    text = { Text("Accedi") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 },
-                    text = { Text("Registrati") })
-            }
+        PrimaryTabRow(selectedTabIndex = selectedTab, modifier = Modifier.fillMaxWidth()) {
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 },
+                text = { Text("Accedi") })
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 },
+                text = { Text("Registrati") })
+        }
 
             Spacer(Modifier.height(24.dp))
 
@@ -227,22 +227,22 @@ private fun RegisterForm(
     var showPwd  by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nome") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nome completo") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
         OutlinedTextField(
             value = email,

@@ -253,9 +253,9 @@ private fun MainScaffold(
 }
 
 private fun Screen.tabLabel() = when (this) {
-    Screen.Blocks          -> "Blocks"
-    Screen.DailyUsage      -> "Usage"
-    Screen.Reports         -> "Reports"
+    Screen.Blocks          -> "Blocchi"
+    Screen.DailyUsage      -> "Utilizzo"
+    Screen.Reports         -> "Report"
     Screen.AccountSettings -> "Account"
     else                   -> ""
 }

@@ -107,7 +107,7 @@ fun BlocksScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = onAddBlock) {
-                Icon(Icons.Default.Add, contentDescription = "Aggiungi blocco")
+                Icon(Icons.Default.Add, contentDescription = "Nuovo blocco")
             }
         }
     ) { innerPadding ->
@@ -127,7 +127,7 @@ fun BlocksScreen(
 
     // Titolo
             Text(
-                text = "Blocks",
+                text = "Blocchi",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -142,7 +142,7 @@ fun BlocksScreen(
                 if (notBlocked.isNotEmpty()) {
                     item {
                         Text(
-                            text  = "Not blocked",
+                            text  = "Non attivi",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -161,7 +161,7 @@ fun BlocksScreen(
                     item {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text  = "Blocked",
+                            text  = "Attivi",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
