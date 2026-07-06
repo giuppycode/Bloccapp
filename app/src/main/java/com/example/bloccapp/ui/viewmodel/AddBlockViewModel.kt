@@ -21,7 +21,7 @@ class AddBlockViewModel(application: Application) : AndroidViewModel(application
         AppDatabase.getInstance(application).blockDao()
     )
 
-    // ── Form state ──────────────────────────────────────────────────────────
+    // Form
 
     private val _blockName = MutableStateFlow("")
     val blockName: StateFlow<String> = _blockName.asStateFlow()
@@ -46,7 +46,7 @@ class AddBlockViewModel(application: Application) : AndroidViewModel(application
     private val _saved = MutableStateFlow(false)
     val saved: StateFlow<Boolean> = _saved.asStateFlow()
 
-    // ── Mutators ─────────────────────────────────────────────────────────────
+    // Funzioni set
 
     fun setBlockName(name: String)            { _blockName.value = name }
     fun setSelectedPackages(pkgs: List<String>) { _selectedPackages.value = pkgs }
@@ -54,7 +54,7 @@ class AddBlockViewModel(application: Application) : AndroidViewModel(application
     fun setWhatConfig(config: WhatConfig)     { _whatConfig.value = config }
     fun setUnlockConfig(config: UnlockConfig) { _unlockConfig.value = config }
 
-    // ── Save ─────────────────────────────────────────────────────────────────
+    // Salvataggio
 
     fun saveBlock() {
         if (_blockName.value.isBlank()) return
@@ -86,7 +86,7 @@ class AddBlockViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // ── Utilities ─────────────────────────────────────────────────────────────
+    // Utils
 
     private fun sha256(input: String): String {
         val md = MessageDigest.getInstance("SHA-256")

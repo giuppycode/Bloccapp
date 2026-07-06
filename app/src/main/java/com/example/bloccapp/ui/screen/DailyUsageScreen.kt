@@ -170,7 +170,7 @@ fun DailyUsageScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement   = Arrangement.spacedBy(12.dp)
             ) {
-                // ── Filter chips ─────────────────────────────────────────────
+            // Chips filtri
                 item {
                     UsageFilterRow(
                         activeFilter     = activeFilter,
@@ -178,7 +178,7 @@ fun DailyUsageScreen(
                     )
                 }
 
-                // ── Daily Total Summary ──────────────────────────────────────
+            // Sompmatio totale
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -199,7 +199,7 @@ fun DailyUsageScreen(
                     }
                 }
 
-                // ── Hourly bar chart ─────────────────────────────────────────
+            // Grafico a barre
                 item {
                     HourlyChartCard(
                         data     = dailyData,
@@ -210,7 +210,7 @@ fun DailyUsageScreen(
                     )
                 }
 
-                // ── App list ─────────────────────────────────────────────────
+            // Lista app
                 if (dailyData.apps.isEmpty()) {
                     item {
                         Box(
@@ -278,9 +278,7 @@ private fun UsageFilterRow(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Hourly bar chart
-// ─────────────────────────────────────────────────────────────────────────────
+// Grafico
 
 @Composable
 private fun HourlyChartCard(
@@ -321,7 +319,7 @@ private fun HourlyChartCard(
             val chartW    = size.width - leftPad
             val chartH    = size.height - bottomPad
 
-            // ── Y-axis: 4 livelli + grid lines ───────────────────────────────
+            // Assi
             val ySteps = 4
             for (i in 0..ySteps) {
                 val frac  = i.toFloat() / ySteps
@@ -352,7 +350,7 @@ private fun HourlyChartCard(
                 )
             }
 
-            // ── X-axis: etichette orarie ─────────────────────────────────────
+            // Labels
             listOf(0, 4, 8, 12, 16, 20, 23).forEach { hour ->
                 val x        = leftPad + (hour.toFloat() / 23f) * chartW
                 val measured = textMeasurer.measure("${hour}h", labelStyle)
@@ -366,7 +364,7 @@ private fun HourlyChartCard(
                 )
             }
 
-            // ── Barre orarie ─────────────────────────────────────────────────
+            // Barre
             val slotW  = chartW / 24f
             val barW   = slotW * 0.65f
             val barOff = (slotW - barW) / 2f
@@ -389,9 +387,7 @@ private fun HourlyChartCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// App usage row
-// ─────────────────────────────────────────────────────────────────────────────
+// Riga app
 
 @Composable
 private fun AppUsageRow(app: AppUsageInfo, filter: UsageFilter, maxValue: Float) {
@@ -431,7 +427,7 @@ private fun AppUsageRow(app: AppUsageInfo, filter: UsageFilter, maxValue: Float)
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ── Icona app ────────────────────────────────────────────────────
+            // Icona
             Box(
                 modifier         = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center
@@ -454,7 +450,7 @@ private fun AppUsageRow(app: AppUsageInfo, filter: UsageFilter, maxValue: Float)
 
             Spacer(Modifier.width(12.dp))
 
-            // ── Nome + barra ─────────────────────────────────────────────────
+            // Nome app
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text       = app.appName,
@@ -477,7 +473,7 @@ private fun AppUsageRow(app: AppUsageInfo, filter: UsageFilter, maxValue: Float)
 
             Spacer(Modifier.width(12.dp))
 
-            // ── Valore filtrato ──────────────────────────────────────────────
+            // Valore
             Text(
                 text  = valueLabel,
                 style = MaterialTheme.typography.labelSmall.copy(

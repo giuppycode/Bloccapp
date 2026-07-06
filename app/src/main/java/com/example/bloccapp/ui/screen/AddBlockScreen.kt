@@ -137,7 +137,7 @@ fun AddBlockScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // ── Block name ───────────────────────────────────────────────────
+            // Nome blocco
             OutlinedTextField(
                 value         = blockName,
                 onValueChange = { vm.setBlockName(it) },
@@ -158,14 +158,14 @@ fun AddBlockScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // ── Selected apps ────────────────────────────────────────────────
+            // App selezionate
             FormRowNavigable(
                 label   = "Selected apps",
                 value   = if (selectedPackages.isEmpty()) "" else "${selectedPackages.size} app selezionate",
                 onClick = { onSelectApps(selectedPackages) }
             )
 
-            // ── When to block ────────────────────────────────────────────────
+            // Regole orarie/limiti
             FormRowNavigable(
                 label   = "When to block",
                 value   = schedule.displayText(),
@@ -192,7 +192,7 @@ fun AddBlockScreen(
             // ── What to block ─────────────────────────────────────────────────
             WhatToBlockSection(config = whatConfig, onUpdate = { vm.setWhatConfig(it) })
 
-            // ── How to unblock ────────────────────────────────────────────────
+            // Configurazione sblocco
             HowToUnblockSection(config = unlockConfig, onUpdate = { vm.setUnlockConfig(it) })
 
             Spacer(Modifier.height(8.dp))
@@ -232,9 +232,7 @@ fun AddBlockScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// When to block — BottomSheet
-// ─────────────────────────────────────────────────────────────────────────────
+// When to block BottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -412,9 +410,7 @@ private fun WhenToBlockSheet(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// What to block — inline FilterChips
-// ─────────────────────────────────────────────────────────────────────────────
+// What to block
 
 @Composable
 private fun WhatToBlockSection(
@@ -448,9 +444,7 @@ private fun WhatToBlockSection(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// How to unblock — inline toggle cards
-// ─────────────────────────────────────────────────────────────────────────────
+// How to unblock
 
 @Composable
 private fun HowToUnblockSection(
@@ -553,9 +547,7 @@ private fun HowToUnblockSection(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Componenti interni condivisi
-// ─────────────────────────────────────────────────────────────────────────────
+// Componenti interni
 
 /** Riga cliccabile con freccia, usata per "Selected apps" e "When to block". */
 @Composable

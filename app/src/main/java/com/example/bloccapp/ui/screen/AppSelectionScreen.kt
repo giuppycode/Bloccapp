@@ -112,7 +112,7 @@ fun AppSelectionScreen(
             contentPadding  = PaddingValues(bottom = 80.dp), // Spazio per il bottone
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── Search bar custom ────────────────────────────────────────────
+            // Search bar
             item {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     OutlinedTextField(
@@ -131,7 +131,7 @@ fun AppSelectionScreen(
                 }
             }
 
-            // ── Categories ───────────────────────────────────────────────────
+            // Categorie
             groupedApps.forEach { (categoryName, categoryApps) ->
                 item {
                     Text(

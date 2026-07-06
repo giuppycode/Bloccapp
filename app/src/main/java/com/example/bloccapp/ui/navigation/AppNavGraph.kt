@@ -54,7 +54,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
 
     NavHost(navController = navController, startDestination = start) {
 
-        // ── Auth ─────────────────────────────────────────────────────────────
+        // Auth
         composable(Screen.Auth.route) {
             AuthScreen(
                 onAuthenticated = {
@@ -66,7 +66,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             )
         }
 
-        // ── Blocks (tab 1) ───────────────────────────────────────────────────
+        // Blocks
         composable(Screen.Blocks.route) {
             MainScaffold(navController) {
                 BlocksScreen(
@@ -77,14 +77,14 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // ── Daily Usage (tab 2) ──────────────────────────────────────────────
+        // Daily Usage
         composable(Screen.DailyUsage.route) {
             MainScaffold(navController) {
                 DailyUsageScreen()
             }
         }
 
-        // ── Reports (tab 3) ──────────────────────────────────────────────────
+        // Reports
         composable(Screen.Reports.route) {
             MainScaffold(navController) {
                 ReportsScreen(
@@ -95,7 +95,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // ── Account & Settings (tab 4) ───────────────────────────────────────
+        // Account
         composable(Screen.AccountSettings.route) {
             MainScaffold(navController) {
                 AccountSettingsScreen(
@@ -109,7 +109,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // ── Add Block (sub-screen) ────────────────────────────────────────────
+        // Add Block
         composable(
             route     = Screen.AddBlock.route,
             arguments = listOf(navArgument(Screen.AddBlock.ARG) { type = NavType.LongType })
@@ -148,7 +148,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             )
         }
 
-        // ── Map Selection (sub-screen) ────────────────────────────────────────
+        // Map Selection
         composable(Screen.MapSelection.route) {
             val prevEntry = navController.previousBackStackEntry
             val initialLat = prevEntry?.savedStateHandle?.get<Double>("initial_lat")
@@ -169,7 +169,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             )
         }
 
-        // ── App Selection (sub-screen) ────────────────────────────────────────
+        // App Selection
         composable(Screen.AppSelection.route) {
             val prevEntry = navController.previousBackStackEntry
             val initial   = prevEntry?.savedStateHandle
@@ -187,7 +187,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             )
         }
 
-        // ── Weekly Report (sub-screen) ────────────────────────────────────────
+        // Weekly Report
         composable(
             route     = Screen.WeeklyReport.route,
             arguments = listOf(navArgument(Screen.WeeklyReport.ARG) { type = NavType.StringType })
@@ -202,9 +202,7 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Scaffold condiviso con 4-tab bottom navigation
-// ─────────────────────────────────────────────────────────────────────────────
+// Scaffold con bottom nav
 
 @Composable
 private fun MainScaffold(

@@ -15,7 +15,7 @@ data class Block(
     val name: String,
     val isEnabled: Boolean = true,
 
-    // ── Quando bloccare ───────────────────────────────────────────────────────
+    // Regole orarie
     /** Tipo di vincolo: "NONE" | "TIME_SLOT" | "DAILY_USAGE" | "DAILY_OPENS" | "LOCATION" */
     val scheduleType: String = "NONE",
     val scheduleStartTime: String = "09:00",
@@ -23,16 +23,16 @@ data class Block(
     val dailyUsageLimitMinutes: Int = 60,
     val dailyOpenCountLimit: Int = 5,
 
-    // ── Geofencing (usato se scheduleType == "LOCATION") ──────────────────────
+    // Geofencing
     val geofenceLat: Double? = null,
     val geofenceLng: Double? = null,
     val geofenceRadius: Float? = null,
 
-    // ── Cosa bloccare ─────────────────────────────────────────────────────────
+    // Cosa bloccare
     val blockAppStart: Boolean = true,
     val blockNotifications: Boolean = false,
 
-    // ── Come sbloccare ────────────────────────────────────────────────────────
+    // Sblocco
     val unlockTimer: Boolean = false,
     @androidx.room.ColumnInfo(name = "unlockTimerMinutes")
     val unlockTimerSeconds: Int = 30,

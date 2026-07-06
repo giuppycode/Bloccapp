@@ -97,13 +97,13 @@ fun WeeklyReportScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── Filter chips ──────────────────────────────────────────────────
+        // Chips
             WeeklyFilterRow(
                 activeFilter     = activeFilter,
                 onFilterSelected = { activeFilter = it }
             )
 
-            // ── Totale + Media giornaliera ────────────────────────────────────
+        // Sommario
             if (week != null) {
                 val (totalValue, avgValue, labelTotal, labelAvg) = when (activeFilter) {
                     UsageFilter.SCREEN_TIME -> {
@@ -185,7 +185,7 @@ fun WeeklyReportScreen(
                 }
             }
 
-            // ── Top 5 apps ────────────────────────────────────────────────────
+        // Top apps
             if (week != null && week.topApps.isNotEmpty()) {
                 Text(
                     "Top 5 apps",
@@ -220,7 +220,7 @@ fun WeeklyReportScreen(
                 }
             }
 
-            // ── Blocking stats ────────────────────────────────────────────────
+        // Statistiche blocchi
             Text(
                 "Blocking stats",
                 style = MaterialTheme.typography.labelLarge,

@@ -116,7 +116,7 @@ fun BlocksScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // ── Sezione Globale: Gamification ────────────────────────────────
+    // Sezione Gamification
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -125,7 +125,7 @@ fun BlocksScreen(
                 GamificationHeader(points = totalPoints)
             }
 
-            // ── Titolo Sezione Blocchi ───────────────────────────────────────
+    // Titolo
             Text(
                 text = "Blocks",
                 style = MaterialTheme.typography.headlineMedium,
@@ -262,9 +262,7 @@ private fun GamificationHeader(points: Int) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UI Components for App Icons in Card
-// ─────────────────────────────────────────────────────────────────────────────
+// App Icons
 
 @Composable
 private fun AppIconRow(packageNames: List<String>) {
@@ -332,9 +330,7 @@ private fun AppSmallIcon(packageName: String) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BlockItem card
-// ─────────────────────────────────────────────────────────────────────────────
+// Card Blocco
 
 @Composable
 private fun BlockItem(
@@ -372,7 +368,7 @@ private fun BlockItem(
         )
     }
 
-    // ── Helpers per richiedere verifica ──────────────────────────────────────
+    // Helper per sblocco
     fun requestVerified(label: String, action: () -> Unit) {
         if (block.hasAnyUnlockMethod()) {
             pendingActionLabel = label
@@ -394,7 +390,7 @@ private fun BlockItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
-                // ── Info ────────────────────────────────────────────────────
+    // Info blocco
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text       = block.name,
@@ -420,7 +416,7 @@ private fun BlockItem(
                     }
                 }
 
-                // ── Actions ──────────────────────────────────────────────────
+    // Switch e delete
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(
                         checked         = block.isEnabled,
@@ -448,7 +444,7 @@ private fun BlockItem(
         }
     }
 
-    // ── Sheet di verifica ────────────────────────────────────────────────────
+    // Sheet sblocco
     if (showUnlockSheet) {
         UnlockToActionSheet(
             block       = block,
@@ -464,9 +460,7 @@ private fun BlockItem(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet di verifica metodo di sblocco
-// ─────────────────────────────────────────────────────────────────────────────
+// BottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -576,9 +570,7 @@ private fun UnlockToActionSheet(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Sezione Timer
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TimerUnlockSection(timerSecs: Int, onUnlocked: () -> Unit) {
@@ -640,9 +632,7 @@ private fun TimerUnlockSection(timerSecs: Int, onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sezione QR scan
-// ─────────────────────────────────────────────────────────────────────────────
+// Sezione QR
 
 @Composable
 private fun QrUnlockSection(
@@ -729,9 +719,7 @@ private fun QrUnlockSection(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Sezione PIN
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun PinUnlockSection(pinHash: String, onUnlocked: () -> Unit) {
@@ -770,9 +758,7 @@ private fun PinUnlockSection(pinHash: String, onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Card wrapper
-// ─────────────────────────────────────────────────────────────────────────────
+// Card Wrapper
 
 @Composable
 private fun UnlockMethodCard(
@@ -801,9 +787,7 @@ private fun UnlockMethodCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────────────────────────────────────
+// Utils
 
 private fun Block.hasAnyUnlockMethod(): Boolean =
     unlockTimer || unlockQrCode || unlockPin || unlockBiometric

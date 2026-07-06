@@ -17,13 +17,12 @@ import com.example.bloccapp.data.db.entity.BlockRule
 import com.example.bloccapp.data.db.entity.GamificationHistory
 
 /**
- * Database Room principale dell'applicazione.
+ * Database Room
  *
- * v1 → schema iniziale (BlockRule, GamificationHistory).
- * v2 → aggiunta tabelle Block e BlockApp (campi stringa generici).
- * v3 → refactoring tabella Block: rimosse colonne stringa generiche,
- *       aggiunte colonne tipizzate per schedule, whatToBlock e howToUnblock.
- * v4 → aggiunta tabella block_events per il tracking degli eventi di blocco.
+ * v1: init
+ * v2: aggiunta Block e BlockApp
+ * v3: refactoring tabella Block (campi tipizzati)
+ * v4: tabella block_events
  */
 @Database(
     entities = [
@@ -56,7 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** Migrazione 1→2: aggiunge le tabelle blocks e block_apps (schema originale). */
+        /** Migrazione 1->2 */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -87,12 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * Migrazione 2→3: rifacimento della tabella `blocks`.
-         * Rimuove le colonne stringa generiche (scheduleDescription, whatToBlock, howToUnblock)
-         * e aggiunge campi tipizzati per schedule, what-to-block e how-to-unblock.
-         * La tabella block_apps non viene modificata.
-         */
+        /** Migrazione 2->3 */
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 1. Crea la nuova tabella con lo schema aggiornato

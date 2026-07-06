@@ -83,7 +83,7 @@ fun AccountSettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── Account section ───────────────────────────────────────────────
+            // Sezione Account
             SectionLabel("Account")
             Card(
                 shape    = RoundedCornerShape(16.dp),
@@ -118,7 +118,7 @@ fun AccountSettingsScreen(
                 }
             }
 
-            // ── App settings section ──────────────────────────────────────────
+            // Impostazioni app
             SectionLabel("App settings")
             Card(
                 shape    = RoundedCornerShape(16.dp),
@@ -152,7 +152,7 @@ fun AccountSettingsScreen(
                 }
             }
 
-            // ── Permissions section ─────────────────────────────────────────
+            // Permessi
             SectionLabel("Permessi (richiesti per il blocco app)")
             PermissionsCard(vm)
 

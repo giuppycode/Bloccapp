@@ -69,9 +69,7 @@ class BlockingService : Service() {
     /** Giorno dell'anno dell'ultimo controllo per il reset a mezzanotte. */
     private var lastCheckDayOfYear = -1
 
-    // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
-    // ─────────────────────────────────────────────────────────────────────────
 
     override fun onCreate() {
         super.onCreate()
@@ -103,9 +101,7 @@ class BlockingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Blocks collection
-    // ─────────────────────────────────────────────────────────────────────────
+    // Caricamento blocchi
 
     private fun collectBlocks() {
         scope.launch {
@@ -132,9 +128,7 @@ class BlockingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Polling loop
-    // ─────────────────────────────────────────────────────────────────────────
+    // Loop di controllo
 
     private fun startPollingLoop() {
         scope.launch {
@@ -234,9 +228,7 @@ class BlockingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Pre-activation notifications logic
-    // ─────────────────────────────────────────────────────────────────────────
+    // Notifiche pre-attivazione
 
     private fun checkPreActivationNotifications() {
         val now = System.currentTimeMillis()
@@ -335,9 +327,7 @@ class BlockingService : Service() {
         Log.d(TAG, "Notification posted: $text")
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Foreground app detection
-    // ─────────────────────────────────────────────────────────────────────────
+    // Detection app in primo piano
 
     private fun getForegroundPackage(): String? {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
@@ -370,9 +360,7 @@ class BlockingService : Service() {
         return lastPkg
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Schedule evaluation
-    // ─────────────────────────────────────────────────────────────────────────
+    // Controllo schedule attiva
 
     private fun isScheduleActive(bwa: BlockWithApps): Boolean {
         val block = bwa.block
@@ -434,9 +422,7 @@ class BlockingService : Service() {
         return usageCache
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Actions
-    // ─────────────────────────────────────────────────────────────────────────
+    // Azioni di blocco
 
     private fun launchBlockedActivity(packageName: String, bwa: BlockWithApps) {
         val intent = BlockedAppActivity.buildIntent(applicationContext, packageName, bwa.block)
@@ -455,9 +441,7 @@ class BlockingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Notifications setup
-    // ─────────────────────────────────────────────────────────────────────────
+    // Setup canali notifiche
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

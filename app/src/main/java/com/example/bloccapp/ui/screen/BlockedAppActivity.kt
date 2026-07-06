@@ -70,12 +70,7 @@ import kotlinx.coroutines.delay
 import java.security.MessageDigest
 
 /**
- * Activity a tutto schermo mostrata quando l'utente apre un'app bloccata.
- *
- * Viene lanciata da [com.example.bloccapp.service.BlockingService] tramite
- * un Intent con FLAG_ACTIVITY_NEW_TASK.
- *
- * Non fa parte del grafo di navigazione Compose — è un'Activity standalone.
+ * Schermata di blocco.
  */
 class BlockedAppActivity : AppCompatActivity() {
 
@@ -175,9 +170,7 @@ class BlockedAppActivity : AppCompatActivity() {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UI
-// ─────────────────────────────────────────────────────────────────────────────
+// Setup UI
 
 @Composable
 private fun BlockedAppScreen(
@@ -210,7 +203,7 @@ private fun BlockedAppScreen(
         ) {
             Spacer(Modifier.height(32.dp))
 
-            // ── App blocked icon ─────────────────────────────────────────────
+    // Icona app bloccata
             Surface(
                 shape  = CircleShape,
                 color  = MaterialTheme.colorScheme.errorContainer,
@@ -226,7 +219,7 @@ private fun BlockedAppScreen(
                 )
             }
 
-            // ── Header ───────────────────────────────────────────────────────
+    // Header
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -245,7 +238,7 @@ private fun BlockedAppScreen(
                 )
             }
 
-            // ── Unlock methods ───────────────────────────────────────────────
+    // Metodi di sblocco
             if (hasAnyUnlock) {
                 Text(
                     text       = "Per continuare, sblocca tramite:",
@@ -280,7 +273,7 @@ private fun BlockedAppScreen(
                 BiometricUnlockCard(onUnlocked = onUnlocked)
             }
 
-            // ── Go home button ───────────────────────────────────────────────
+    // Bottone home
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick  = onGoHome,
@@ -300,9 +293,7 @@ private fun BlockedAppScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Timer unlock
-// ─────────────────────────────────────────────────────────────────────────────
+// Timer
 
 @Composable
 private fun TimerUnlockCard(timerSecs: Int, onUnlocked: () -> Unit) {
@@ -363,9 +354,7 @@ private fun TimerUnlockCard(timerSecs: Int, onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PIN unlock
-// ─────────────────────────────────────────────────────────────────────────────
+// PIN
 
 @Composable
 private fun PinUnlockCard(pinHash: String, onUnlocked: () -> Unit) {
@@ -404,9 +393,7 @@ private fun PinUnlockCard(pinHash: String, onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// QR unlock
-// ─────────────────────────────────────────────────────────────────────────────
+// QR
 
 @Composable
 private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
@@ -459,9 +446,7 @@ private fun QrUnlockCard(qrSecret: String, onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Biometric unlock
-// ─────────────────────────────────────────────────────────────────────────────
+// Biometrico
 
 @Composable
 private fun BiometricUnlockCard(onUnlocked: () -> Unit) {
@@ -510,9 +495,7 @@ private fun BiometricUnlockCard(onUnlocked: () -> Unit) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared card wrapper
-// ─────────────────────────────────────────────────────────────────────────────
+// Wrapper Card
 
 @Composable
 private fun UnlockCard(
@@ -541,9 +524,7 @@ private fun UnlockCard(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────────────────────────────────────
+// Utils
 
 private fun sha256(input: String): String {
     val md = MessageDigest.getInstance("SHA-256")

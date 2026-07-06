@@ -9,9 +9,7 @@ import android.os.Build
 import android.util.Log
 import java.util.Calendar
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Data models
-// ─────────────────────────────────────────────────────────────────────────────
 
 data class AppUsageInfo(
     val packageName: String,
@@ -24,7 +22,7 @@ data class AppUsageInfo(
 )
 
 /**
- * Dati di utilizzo aggregati per la giornata corrente.
+ * Stats di utilizzo per la giornata.
  */
 data class DailyUsageData(
     val apps: List<AppUsageInfo>,
@@ -50,9 +48,7 @@ data class DailyUsageData(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Provider
-// ─────────────────────────────────────────────────────────────────────────────
 
 object UsageStatsProvider {
 
@@ -87,7 +83,7 @@ object UsageStatsProvider {
         val events = usm.queryEvents(startOfDay, now)
         val event  = UsageEvents.Event()
 
-        // ── Determinazione app già aperta a inizio intervallo (es. mezzanotte) ──
+    // Fix per app già aperta a mezzanotte
         // Cerchiamo l'ultimo evento prima dello startOfDay negli ultimi 24h
         val preEvents = usm.queryEvents(startOfDay - 86_400_000L, startOfDay)
         var pkgActiveAtStart: String? = null
@@ -152,8 +148,7 @@ object UsageStatsProvider {
     }
 
     /**
-     * Restituisce TUTTE le app installate che possono essere avviate dal launcher,
-     * arricchite con le statistiche di utilizzo di oggi (se disponibili).
+     * Ritorna le app installate con stats di oggi.
      */
     fun getAllInstalledApps(context: Context): List<AppUsageInfo> {
         val pm = context.packageManager

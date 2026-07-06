@@ -3,11 +3,7 @@ package com.example.bloccapp.service
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Singleton thread-safe che traccia gli sblocchi temporanei.
- *
- * Quando l'utente passa con successo un metodo di sblocco (timer, PIN, QR),
- * il pacchetto viene aggiunto qui con un timestamp di scadenza.
- * Il [BlockingService] controlla [isTemporarilyUnlocked] prima di bloccare.
+ * Gestisce lo stato globale del blocco (sblocchi temporanei e geofence attive).
  */
 object BlockingState {
 
