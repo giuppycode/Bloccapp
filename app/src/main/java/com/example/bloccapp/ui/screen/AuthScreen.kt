@@ -89,13 +89,13 @@ fun AuthScreen(
             Spacer(Modifier.height(48.dp))
 
             Text(
-                text = "🛡️ Bloccapp",
+                text = "Bloccapp",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Il tuo assistente per il Digital Wellbeing",
+                text = "Mantieni il focus, lontano dalle distrazioni",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
