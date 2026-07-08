@@ -8,12 +8,14 @@ local.properties
 
 # File specifici dell'IDE Android Studio e IntelliJ
 *.iml
+.idea/
 .idea/caches
 .idea/libraries
 .idea/modules.xml
 .idea/workspace.xml
 .idea/navEditor.xml
 .idea/assetWizardSettings.xml
+.idea/planningMode.xml
 
 # File specifici per Mac (se usi macOS)
 .DS_Store
