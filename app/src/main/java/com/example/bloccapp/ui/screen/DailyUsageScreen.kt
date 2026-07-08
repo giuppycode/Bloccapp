@@ -40,11 +40,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -63,6 +66,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bloccapp.AppUsageInfo
 import com.example.bloccapp.DailyUsageData
 import com.example.bloccapp.ui.viewmodel.DashboardViewModel
+import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -88,6 +92,7 @@ fun DailyUsageScreen(
 ) {
     val dailyData by vm.dailyData.collectAsStateWithLifecycle()
     val hasPerm   by vm.hasUsagePermission.collectAsStateWithLifecycle()
+    val userInfo  by vm.userInfo.collectAsStateWithLifecycle()
 
     // Rinfresca i dati ogni volta che l'utente torna nella schermata
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -170,7 +175,32 @@ fun DailyUsageScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement   = Arrangement.spacedBy(12.dp)
             ) {
-            // Chips filtri
+                item {
+                    val greeting = remember(userInfo?.displayName) {
+                        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                        val base = when {
+                            hour in 5..12 -> "Buongiorno"
+                            hour in 13..18 -> "Buon pomeriggio"
+                            else -> "Buonasera"
+                        }
+                        "$base, ${userInfo?.displayName ?: "Utente"}!"
+                    }
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        Text(
+                            text = greeting,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Ecco come stai usando il tuo tempo oggi.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Chips filtri
                 item {
                     UsageFilterRow(
                         activeFilter     = activeFilter,
@@ -286,7 +316,6 @@ private fun HourlyChartCard(
     filter: UsageFilter,
     modifier: Modifier = Modifier
 ) {
-    // Valori per le 24 ore in base al filtro attivo
     val hourlyValues = remember(data, filter) {
         FloatArray(24) { h ->
             when (filter) {
@@ -301,87 +330,130 @@ private fun HourlyChartCard(
     val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
     val labelColor   = MaterialTheme.colorScheme.onSurfaceVariant
-    val gridColor    = MaterialTheme.colorScheme.outlineVariant
-    val labelStyle   = TextStyle(fontSize = 9.sp, color = labelColor)
+    val gridColor    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+    val labelStyle   = TextStyle(fontSize = 10.sp, color = labelColor, fontWeight = FontWeight.Medium)
 
     Card(
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape    = RoundedCornerShape(24.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier
     ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 12.dp, start = 4.dp, end = 8.dp, bottom = 4.dp)
-        ) {
-            val leftPad   = 44.dp.toPx()
-            val bottomPad = 20.dp.toPx()
-            val chartW    = size.width - leftPad
-            val chartH    = size.height - bottomPad
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Attività nelle 24 ore",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
 
-            // Assi
-            val ySteps = 4
-            for (i in 0..ySteps) {
-                val frac  = i.toFloat() / ySteps
-                val value = maxValue * frac
-                val y     = chartH * (1f - frac)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 8.dp)
+            ) {
+                val leftPad   = 40.dp.toPx()
+                val bottomPad = 24.dp.toPx()
+                val chartW    = size.width - leftPad
+                val chartH    = size.height - bottomPad
 
-                // Grid line
-                drawLine(
-                    color       = gridColor,
-                    start       = Offset(leftPad, y),
-                    end         = Offset(size.width, y),
-                    strokeWidth = 0.5f
-                )
-
-                // Label asse Y
-                val label = if (filter == UsageFilter.SCREEN_TIME)
-                    formatYLabelMs(value.toLong())
-                else
-                    value.toInt().toString()
-
-                val measured = textMeasurer.measure(label, labelStyle)
-                drawText(
-                    textLayoutResult = measured,
-                    topLeft = Offset(
-                        x = leftPad - measured.size.width.toFloat() - 4.dp.toPx(),
-                        y = y - measured.size.height / 2f
+                // Linee di griglia orizzontali (sfumate)
+                val ySteps = 3
+                for (i in 0..ySteps) {
+                    val frac  = i.toFloat() / ySteps
+                    val y     = chartH * (1f - frac)
+                    drawLine(
+                        color       = gridColor,
+                        start       = Offset(leftPad, y),
+                        end         = Offset(size.width, y),
+                        strokeWidth = 1.dp.toPx()
                     )
-                )
-            }
+                    
+                    // Label asse Y
+                    val valAtStep = maxValue * frac
+                    val label = if (filter == UsageFilter.SCREEN_TIME)
+                        formatYLabelMs(valAtStep.toLong())
+                    else
+                        valAtStep.toInt().toString()
 
-            // Labels
-            listOf(0, 4, 8, 12, 16, 20, 23).forEach { hour ->
-                val x        = leftPad + (hour.toFloat() / 23f) * chartW
-                val measured = textMeasurer.measure("${hour}h", labelStyle)
-                drawText(
-                    textLayoutResult = measured,
-                    topLeft = Offset(
-                        x = (x - measured.size.width / 2f)
-                            .coerceIn(leftPad, size.width - measured.size.width.toFloat()),
-                        y = chartH + 4.dp.toPx()
+                    val measured = textMeasurer.measure(label, labelStyle)
+                    drawText(
+                        textLayoutResult = measured,
+                        topLeft = Offset(
+                            x = leftPad - measured.size.width.toFloat() - 8.dp.toPx(),
+                            y = y - measured.size.height / 2f
+                        )
                     )
-                )
-            }
+                }
 
-            // Barre
-            val slotW  = chartW / 24f
-            val barW   = slotW * 0.65f
-            val barOff = (slotW - barW) / 2f
+                // Disegno dell'area sfumata (Gradients)
+                val slotW = chartW / 23f
+                val path = Path().apply {
+                    moveTo(leftPad, chartH)
+                    for (hour in 0..23) {
+                        val x = leftPad + hour * slotW
+                        val valFrac = (hourlyValues[hour] / maxValue)
+                        val y = chartH - (chartH * valFrac)
+                        if (hour == 0) moveTo(x, y) else lineTo(x, y)
+                    }
+                }
 
-            for (hour in 0..23) {
-                val value = hourlyValues[hour]
-                if (value <= 0f) continue
-                val frac = (value / maxValue).coerceIn(0f, 1f)
-                val barH = chartH * frac
-                val x    = leftPad + hour * slotW + barOff
-                val y    = chartH - barH
-                drawRoundRect(
-                    color        = primaryColor,
-                    topLeft      = Offset(x, y),
-                    size         = Size(barW, barH),
-                    cornerRadius = CornerRadius(3.dp.toPx())
+                // Linea del grafico curva (o spezzata morbida)
+                drawPath(
+                    path = path,
+                    color = primaryColor,
+                    style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
                 )
+
+                // Riempimento sfumato sotto la linea
+                val fillPath = Path().apply {
+                    addPath(path)
+                    lineTo(leftPad + chartW, chartH)
+                    lineTo(leftPad, chartH)
+                    close()
+                }
+                drawPath(
+                    path = fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent),
+                        startY = 0f,
+                        endY = chartH
+                    ),
+                    style = Fill
+                )
+
+                // Punti sui picchi
+                for (hour in 0..23) {
+                    val value = hourlyValues[hour]
+                    if (value > maxValue * 0.1f) { // Disegna punti solo per valori rilevanti
+                        val x = leftPad + hour * slotW
+                        val y = chartH - (chartH * (value / maxValue))
+                        drawCircle(
+                            color = Color.White,
+                            radius = 4.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                        drawCircle(
+                            color = primaryColor,
+                            radius = 2.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+                }
+
+                // Labels asse X (ore principali)
+                listOf(0, 6, 12, 18, 23).forEach { hour ->
+                    val x = leftPad + (hour.toFloat() / 23f) * chartW
+                    val label = "${hour}h"
+                    val measured = textMeasurer.measure(label, labelStyle)
+                    drawText(
+                        textLayoutResult = measured,
+                        topLeft = Offset(
+                            x = (x - measured.size.width / 2f).coerceIn(leftPad, size.width - measured.size.width),
+                            y = chartH + 8.dp.toPx()
+                        )
+                    )
+                }
             }
         }
     }
