@@ -60,7 +60,7 @@ fun ProfileScreen(
     var showEditNameDialog by remember { mutableStateOf(false) }
     var newName by remember(userInfo) { mutableStateOf(userInfo?.displayName ?: "") }
 
-    // Rinfresca i permessi ogni volta che l'utente torna nella schermata
+    // Ricarico i permessi quando torniamo nell'app
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -85,7 +85,7 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Sezione Profilo
+            // Sezione dei dati dell'utente
             SectionLabel("Profilo")
             Card(
                 shape    = RoundedCornerShape(16.dp),
@@ -147,7 +147,7 @@ fun ProfileScreen(
                 )
             }
 
-            // Impostazioni app
+            // Tutte le impostazioni estetiche dell'app
             SectionLabel("Impostazioni app")
             Card(
                 shape    = RoundedCornerShape(16.dp),
@@ -181,7 +181,7 @@ fun ProfileScreen(
                 }
             }
 
-            // Permessi
+            // Qui gestiamo tutti i permessi necessari
             SectionLabel("Permessi (richiesti per il blocco app)")
             PermissionsCard(vm)
 

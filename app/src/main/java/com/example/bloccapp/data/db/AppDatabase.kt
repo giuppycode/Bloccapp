@@ -19,14 +19,8 @@ import com.example.bloccapp.data.db.entity.GamificationHistory
 import com.example.bloccapp.data.db.entity.User
 
 /**
- * Database Room
- *
- * v1: init
- * v2: aggiunta Block e BlockApp
- * v3: refactoring tabella Block (campi tipizzati)
- * v4: tabella block_events
- * v5: campi geofence
- * v6: tabella users
+ * Definizione del Database Room dell'applicazione.
+ * Qui teniamo traccia di tutte le versioni e delle migrazioni fatte.
  */
 @Database(
     entities = [
@@ -52,7 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        /** Migrazione 5→6: aggiunge la tabella users. */
+        // Da v5 a v6: creiamo la tabella degli utenti locali
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -64,14 +58,14 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-                // Inserisce un utente di default
+                // Inseriamo un profilo vuoto di partenza
                 db.execSQL(
                     "INSERT INTO `users` (`id`, `displayName`, `email`) VALUES (1, 'Utente', '')"
                 )
             }
         }
 
-        /** Migrazione 4→5: aggiunge campi geofence alla tabella blocks. */
+        // Da v4 a v5: aggiungiamo i dati per la posizione (geofence) nei blocchi
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `blocks` ADD COLUMN `geofenceLat` REAL")
