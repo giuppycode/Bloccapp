@@ -10,11 +10,13 @@ import com.example.bloccapp.data.db.dao.BlockDao
 import com.example.bloccapp.data.db.dao.BlockEventDao
 import com.example.bloccapp.data.db.dao.BlockRuleDao
 import com.example.bloccapp.data.db.dao.GamificationHistoryDao
+import com.example.bloccapp.data.db.dao.UserDao
 import com.example.bloccapp.data.db.entity.Block
 import com.example.bloccapp.data.db.entity.BlockApp
 import com.example.bloccapp.data.db.entity.BlockEvent
 import com.example.bloccapp.data.db.entity.BlockRule
 import com.example.bloccapp.data.db.entity.GamificationHistory
+import com.example.bloccapp.data.db.entity.User
 
 /**
  * Database Room
@@ -23,6 +25,8 @@ import com.example.bloccapp.data.db.entity.GamificationHistory
  * v2: aggiunta Block e BlockApp
  * v3: refactoring tabella Block (campi tipizzati)
  * v4: tabella block_events
+ * v5: campi geofence
+ * v6: tabella users
  */
 @Database(
     entities = [
@@ -30,9 +34,10 @@ import com.example.bloccapp.data.db.entity.GamificationHistory
         GamificationHistory::class,
         Block::class,
         BlockApp::class,
-        BlockEvent::class
+        BlockEvent::class,
+        User::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,10 +46,30 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gamificationHistoryDao(): GamificationHistoryDao
     abstract fun blockDao(): BlockDao
     abstract fun blockEventDao(): BlockEventDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        /** Migrazione 5→6: aggiunge la tabella users. */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `users` (
+                        `id`          INTEGER PRIMARY KEY NOT NULL,
+                        `displayName` TEXT    NOT NULL,
+                        `email`       TEXT    NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                // Inserisce un utente di default
+                db.execSQL(
+                    "INSERT INTO `users` (`id`, `displayName`, `email`) VALUES (1, 'Utente', '')"
+                )
+            }
+        }
 
         /** Migrazione 4→5: aggiunge campi geofence alla tabella blocks. */
         private val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -152,7 +177,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "bloccapp.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                     .also { INSTANCE = it }
             }
