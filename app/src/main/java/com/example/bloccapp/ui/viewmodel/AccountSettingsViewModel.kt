@@ -4,9 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bloccapp.PermissionManager
-import com.example.bloccapp.data.preferences.AuthPreferencesManager
+import com.example.bloccapp.data.db.AppDatabase
 import com.example.bloccapp.data.preferences.ThemeMode
 import com.example.bloccapp.data.preferences.ThemePreferencesManager
+import com.example.bloccapp.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,12 +18,13 @@ import kotlinx.coroutines.launch
 class AccountSettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val themePrefs = ThemePreferencesManager(application)
-    private val authPrefs  = AuthPreferencesManager(application)
+    private val db         = AppDatabase.getInstance(application)
+    private val userRepo   = UserRepository(db.userDao())
 
     val themeMode: StateFlow<ThemeMode> = themePrefs.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
 
-    val userInfo = authPrefs.userInfo
+    val userInfo = userRepo.user
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _usagePermissionGranted = MutableStateFlow(PermissionManager.hasUsageStatsPermission(application))
@@ -53,10 +55,9 @@ class AccountSettingsViewModel(application: Application) : AndroidViewModel(appl
         viewModelScope.launch { themePrefs.setThemeMode(mode) }
     }
 
-    fun logout(onDone: () -> Unit) {
+    fun updateDisplayName(name: String) {
         viewModelScope.launch {
-            authPrefs.logout()
-            onDone()
+            userRepo.updateDisplayName(name)
         }
     }
 }

@@ -8,14 +8,11 @@ import java.net.URLEncoder
  */
 sealed class Screen(val route: String) {
 
-    // ──── Auth ────────────────────────────────────────────────────────────────
-    object Auth : Screen("auth")
-
     // ──── Bottom-nav (tab principali) ─────────────────────────────────────────
-    object Blocks          : Screen("blocks")
-    object DailyUsage      : Screen("daily_usage")
-    object Reports         : Screen("reports")
-    object AccountSettings : Screen("account_settings")
+    object Blocks    : Screen("blocks")
+    object DailyUsage: Screen("daily_usage")
+    object Reports   : Screen("reports")
+    object Profile   : Screen("profile")
 
     // ──── Sub-schermate (senza bottom nav) ────────────────────────────────────
 

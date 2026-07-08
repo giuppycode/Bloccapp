@@ -25,46 +25,30 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.bloccapp.ui.screen.AccountSettingsScreen
 import com.example.bloccapp.ui.screen.AddBlockScreen
 import com.example.bloccapp.ui.screen.AppSelectionScreen
-import com.example.bloccapp.ui.screen.AuthScreen
 import com.example.bloccapp.ui.screen.BlocksScreen
 import com.example.bloccapp.ui.screen.DailyUsageScreen
 import com.example.bloccapp.ui.screen.MapSelectionScreen
+import com.example.bloccapp.ui.screen.ProfileScreen
 import com.example.bloccapp.ui.screen.ReportsScreen
 import com.example.bloccapp.ui.screen.WeeklyReportScreen
 import com.example.bloccapp.ui.viewmodel.AddBlockViewModel
-import com.example.bloccapp.ui.viewmodel.AuthViewModel
 
 /** Schermate principali con bottom navigation. */
 private val bottomNavItems = listOf(
     Screen.Blocks,
     Screen.DailyUsage,
     Screen.Reports,
-    Screen.AccountSettings
+    Screen.Profile
 )
 
 @Composable
-fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
+fun AppNavGraph() {
     val navController = rememberNavController()
-    val isLoggedIn    by authViewModel.isLoggedIn.collectAsStateWithLifecycle()
-
-    val start = if (isLoggedIn) Screen.Blocks.route else Screen.Auth.route
+    val start = Screen.Blocks.route
 
     NavHost(navController = navController, startDestination = start) {
-
-        // Auth
-        composable(Screen.Auth.route) {
-            AuthScreen(
-                onAuthenticated = {
-                    navController.navigate(Screen.Blocks.route) {
-                        popUpTo(Screen.Auth.route) { inclusive = true }
-                    }
-                },
-                authViewModel = authViewModel
-            )
-        }
 
         // Blocks
         composable(Screen.Blocks.route) {
@@ -95,17 +79,10 @@ fun AppNavGraph(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // Account
-        composable(Screen.AccountSettings.route) {
+        // Profile
+        composable(Screen.Profile.route) {
             MainScaffold(navController) {
-                AccountSettingsScreen(
-                    onLogout = {
-                        authViewModel.logout()
-                        navController.navigate(Screen.Auth.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
+                ProfileScreen()
             }
         }
 
@@ -220,11 +197,11 @@ private fun MainScaffold(
                         icon = {
                             Icon(
                                 imageVector = when (screen) {
-                                    Screen.Blocks          -> Icons.Default.Lock
-                                    Screen.DailyUsage      -> Icons.Default.BarChart
-                                    Screen.Reports         -> Icons.Default.DateRange
-                                    Screen.AccountSettings -> Icons.Default.Person
-                                    else                   -> Icons.Default.Lock
+                                    Screen.Blocks    -> Icons.Default.Lock
+                                    Screen.DailyUsage-> Icons.Default.BarChart
+                                    Screen.Reports   -> Icons.Default.DateRange
+                                    Screen.Profile   -> Icons.Default.Person
+                                    else             -> Icons.Default.Lock
                                 },
                                 contentDescription = screen.route
                             )
@@ -253,9 +230,9 @@ private fun MainScaffold(
 }
 
 private fun Screen.tabLabel() = when (this) {
-    Screen.Blocks          -> "Blocchi"
-    Screen.DailyUsage      -> "Utilizzo"
-    Screen.Reports         -> "Report"
-    Screen.AccountSettings -> "Account"
-    else                   -> ""
+    Screen.Blocks    -> "Blocchi"
+    Screen.DailyUsage-> "Utilizzo"
+    Screen.Reports   -> "Report"
+    Screen.Profile   -> "Profilo"
+    else             -> ""
 }

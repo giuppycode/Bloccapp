@@ -8,9 +8,8 @@ import com.example.bloccapp.DailyUsageData
 import com.example.bloccapp.UsageStatsProvider
 import com.example.bloccapp.data.db.AppDatabase
 import com.example.bloccapp.data.db.entity.GamificationHistory
-import com.example.bloccapp.data.preferences.AuthPreferencesManager
-import com.example.bloccapp.data.preferences.UserInfo
 import com.example.bloccapp.data.repository.GamificationRepository
+import com.example.bloccapp.data.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,10 +24,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val db               = AppDatabase.getInstance(application)
     private val gamificationRepo = GamificationRepository(db.gamificationHistoryDao())
-    private val authPrefs        = AuthPreferencesManager(application.applicationContext)
+    private val userRepo         = UserRepository(db.userDao())
 
-    /** Informazioni sull'utente loggato. */
-    val userInfo: StateFlow<UserInfo?> = authPrefs.userInfo
+    /** Informazioni sull'utente. */
+    val userInfo = userRepo.user
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Punteggio totale gamification. */

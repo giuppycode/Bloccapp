@@ -51,12 +51,14 @@ import com.example.bloccapp.ui.viewmodel.AccountSettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSettingsScreen(
-    onLogout: () -> Unit,
+fun ProfileScreen(
     vm: AccountSettingsViewModel = viewModel()
 ) {
     val userInfo  by vm.userInfo.collectAsStateWithLifecycle()
     val themeMode by vm.themeMode.collectAsStateWithLifecycle()
+
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var newName by remember(userInfo) { mutableStateOf(userInfo?.displayName ?: "") }
 
     // Rinfresca i permessi ogni volta che l'utente torna nella schermata
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -72,7 +74,7 @@ fun AccountSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Account & Impostazioni", fontWeight = FontWeight.Bold) })
+            TopAppBar(title = { Text("Profilo & Impostazioni", fontWeight = FontWeight.Bold) })
         }
     ) { innerPadding ->
         Column(
@@ -83,39 +85,66 @@ fun AccountSettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Sezione Account
-            SectionLabel("Account")
+            // Sezione Profilo
+            SectionLabel("Profilo")
             Card(
                 shape    = RoundedCornerShape(16.dp),
                 colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    if (userInfo != null) {
-                        Text(
-                            text  = userInfo!!.displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text  = userInfo!!.email,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Text("Non loggato", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = { vm.logout(onLogout) },
-                        colors  = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Esci")
+                        Column {
+                            Text(
+                                text  = userInfo?.displayName ?: "Utente",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (userInfo?.email?.isNotEmpty() == true) {
+                                Text(
+                                    text  = userInfo!!.email,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Button(onClick = { showEditNameDialog = true }) {
+                            Text("Modifica")
+                        }
                     }
                 }
+            }
+
+            if (showEditNameDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showEditNameDialog = false },
+                    title = { Text("Modifica Nome") },
+                    text = {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            label = { Text("Nome") },
+                            singleLine = true
+                        )
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            vm.updateDisplayName(newName)
+                            showEditNameDialog = false
+                        }) {
+                            Text("Salva")
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showEditNameDialog = false }) {
+                            Text("Annulla")
+                        }
+                    }
+                )
             }
 
             // Impostazioni app
