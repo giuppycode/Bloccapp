@@ -29,9 +29,9 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 /**
- * Servizio in foreground che monitora quale app è in primo piano ogni secondo.
- *
- * Gestisce anche le notifiche di pre-attivazione (5 min, 1 min, 30 sec).
+ * Questo servizio gira sempre in background per controllare quale app stiamo usando.
+ * Se apriamo un'app che dovrebbe essere bloccata, fa apparire la schermata di blocco.
+ * Gestisce anche le notifiche di avviso prima che un blocco si attivi.
  */
 class BlockingService : Service() {
 
@@ -52,18 +52,18 @@ class BlockingService : Service() {
     private var enabledBlocks: List<BlockWithApps> = emptyList()
     private var geofenceManager: GeofenceManager? = null
 
-    /** Package bloccato al tick precedente. */
+    /** Ultimo pacchetto bloccato (per non rilanciare l'activity all'infinito) */
     private var lastBlockedPackage: String? = null
-    /** Ultimo package rilevato in primo piano (anche se non bloccato). */
+    /** Ultima app che abbiamo visto in primo piano */
     private var lastKnownForegroundPackage: String? = null
-    /** Timestamp dell'ultimo lancio dell'activity di blocco (ms). */
+    /** Quando abbiamo lanciato l'activity di blocco l'ultima volta */
     private var lastLaunchTimestamp = 0L
 
-    /** Cache usage stats. */
+    /** Dati di utilizzo salvati temporaneamente per non interrogare troppo il sistema */
     private var usageCacheTimestamp = 0L
     private var usageCache: List<com.example.bloccapp.AppUsageInfo> = emptyList()
 
-    /** Cache notifiche inviate. */
+    /** Mappa per ricordarci quali notifiche abbiamo già mandato oggi */
     private val sentNotifications = mutableMapOf<String, Boolean>()
 
     /** Giorno dell'anno dell'ultimo controllo per il reset a mezzanotte. */
@@ -101,12 +101,11 @@ class BlockingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // Caricamento blocchi
-
+    // Qui carichiamo i blocchi attivi dal database
     private fun collectBlocks() {
         scope.launch {
             db?.blockDao()?.getEnabledBlocksWithApps()?.collect { blocks ->
-                // Rileva blocchi rimossi o disabilitati per togliere le geofence
+                // Se un blocco geofence viene tolto, dobbiamo rimuovere la geofence da Android
                 val currentEnabledIds = blocks.map { it.block.id }.toSet()
                 enabledBlocks.forEach { old ->
                     if (old.block.scheduleType == "LOCATION" && !currentEnabledIds.contains(old.block.id)) {
@@ -115,11 +114,9 @@ class BlockingService : Service() {
                 }
                 
                 enabledBlocks = blocks
-                Log.d(TAG, "Loaded ${blocks.size} enabled blocks:")
+                Log.d(TAG, "Caricati ${blocks.size} blocchi attivi")
                 blocks.forEach { bwa ->
-                    Log.d(TAG, "  - Block: ${bwa.block.name}, Type: ${bwa.block.scheduleType}, Start: ${bwa.block.scheduleStartTime}")
-                    
-                    // Registra geofence se di tipo LOCATION
+                    // Se il blocco dipende dalla posizione, attiviamo il geofencing
                     if (bwa.block.scheduleType == "LOCATION") {
                         geofenceManager?.addGeofence(bwa.block)
                     }
@@ -128,17 +125,16 @@ class BlockingService : Service() {
         }
     }
 
-    // Loop di controllo
-
+    // Ogni secondo controlliamo cosa sta succedendo
     private fun startPollingLoop() {
         scope.launch {
             while (true) {
                 try {
-                    checkDayChange()
-                    checkForegroundApp()
-                    checkPreActivationNotifications()
+                    checkDayChange() // Controlla se è passata la mezzanotte
+                    checkForegroundApp() // Controlla che app stiamo usando
+                    checkPreActivationNotifications() // Controlla se dobbiamo mandare avvisi
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in polling loop", e)
+                    Log.e(TAG, "Errore nel loop di controllo", e)
                 }
                 delay(1_000L)
             }

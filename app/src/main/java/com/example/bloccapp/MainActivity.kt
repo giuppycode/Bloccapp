@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Configurazione OpenStreetMap
+        // Setup iniziale per far funzionare le mappe (OpenStreetMap)
         Configuration.getInstance().load(
             applicationContext,
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -35,8 +35,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Avvia il servizio di blocco se i permessi necessari sono già stati concessi.
-        // Se mancano, la schermata Account → Permessi guiderà l'utente.
+        // Avviamo il servizio che controlla le app se abbiamo i permessi.
+        // Se non ci sono, l'utente dovrà abilitarli nella schermata Profilo.
         maybeStartBlockingService()
     }
 
@@ -45,9 +45,9 @@ class MainActivity : AppCompatActivity() {
         maybeStartBlockingService()
     }
 
-    /**
-     * Avvia [BlockingService] come foreground service se entrambi i permessi
-     * (PACKAGE_USAGE_STATS e SYSTEM_ALERT_WINDOW) sono stati concessi.
+    /*
+     * Proviamo a far partire il servizio (BlockingService) solo se abbiamo
+     * sia l'accesso all'utilizzo che il permesso per le finestre di overlay.
      */
     private fun maybeStartBlockingService() {
         val hasUsage = PermissionManager.hasUsageStatsPermission(this)
