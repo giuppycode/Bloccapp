@@ -21,13 +21,25 @@ class GamificationRepository(private val dao: GamificationHistoryDao) {
 
     /**
      * Aggiunge punti con una descrizione all'evento.
+     * Impedisce che il saldo totale scenda sotto lo zero.
      * @param points      Valore positivo per guadagnare, negativo per decurtare.
      * @param description Descrizione human-readable dell'evento.
      */
     suspend fun addPoints(points: Int, description: String) {
+        val currentTotal = dao.getCurrentTotal()
+        
+        // Se stiamo togliendo punti e il totale andrebbe sotto zero, 
+        // limitiamo la perdita a quanto basta per arrivare a zero.
+        val adjustedPoints = if (points < 0) {
+            if (currentTotal == 0) return // Non aggiungiamo nemmeno il log se siamo già a 0
+            if (currentTotal + points < 0) -currentTotal else points
+        } else {
+            points
+        }
+
         dao.insert(
             GamificationHistory(
-                points = points,
+                points = adjustedPoints,
                 timestamp = System.currentTimeMillis(),
                 description = description
             )

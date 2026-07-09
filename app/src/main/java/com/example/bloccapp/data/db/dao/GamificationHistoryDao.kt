@@ -18,6 +18,10 @@ interface GamificationHistoryDao {
     @Query("SELECT COALESCE(SUM(points), 0) FROM gamification_history")
     fun getTotalPoints(): Flow<Int>
 
+    /** Restituisce il totale attuale dei punti (non come flusso). */
+    @Query("SELECT COALESCE(SUM(points), 0) FROM gamification_history")
+    suspend fun getCurrentTotal(): Int
+
     /** Restituisce gli eventi per un giorno specifico (range timestamp in ms). */
     @Query("SELECT * FROM gamification_history WHERE timestamp BETWEEN :startOfDay AND :endOfDay ORDER BY timestamp DESC")
     fun getHistoryByDay(startOfDay: Long, endOfDay: Long): Flow<List<GamificationHistory>>
