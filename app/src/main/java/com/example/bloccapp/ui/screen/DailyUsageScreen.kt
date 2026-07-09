@@ -3,7 +3,14 @@ package com.example.bloccapp.ui.screen
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,9 +97,10 @@ enum class UsageFilter(val label: String) {
 fun DailyUsageScreen(
     vm: DashboardViewModel = viewModel()
 ) {
-    val dailyData by vm.dailyData.collectAsStateWithLifecycle()
-    val hasPerm   by vm.hasUsagePermission.collectAsStateWithLifecycle()
-    val userInfo  by vm.userInfo.collectAsStateWithLifecycle()
+    val dailyData   by vm.dailyData.collectAsStateWithLifecycle()
+    val hasPerm     by vm.hasUsagePermission.collectAsStateWithLifecycle()
+    val userInfo    by vm.userInfo.collectAsStateWithLifecycle()
+    val totalPoints by vm.totalPoints.collectAsStateWithLifecycle()
 
     // Rinfresca i dati ogni volta che l'utente torna nella schermata
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -117,9 +125,7 @@ fun DailyUsageScreen(
     var activeFilter by remember { mutableStateOf(UsageFilter.SCREEN_TIME) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Utilizzo oggi", fontWeight = FontWeight.Bold) })
-        }
+        // TopAppBar rimossa per pulizia visiva, il saluto fa da intestazione
     ) { innerPadding ->
         if (!hasPerm) {
             Box(
@@ -185,7 +191,7 @@ fun DailyUsageScreen(
                         }
                         "$base, ${userInfo?.displayName ?: "Utente"}!"
                     }
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
                         Text(
                             text = greeting,
                             style = MaterialTheme.typography.headlineSmall,
@@ -198,6 +204,11 @@ fun DailyUsageScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+
+                // Sezione Gamification (Spostata qui)
+                item {
+                    GamificationHeader(points = totalPoints)
                 }
 
                 // Chips filtri
