@@ -65,6 +65,15 @@
             android:name=".service.GeofenceBroadcastReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Scanner activity forced to portrait or sensor -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            tools:replace="android:screenOrientation"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden" />
     </application>
 
 </manifest>
