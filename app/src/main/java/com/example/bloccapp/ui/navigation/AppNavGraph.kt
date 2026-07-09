@@ -45,7 +45,7 @@ private val bottomNavItems = listOf(
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
-    val start = Screen.Blocks.route
+    val start = Screen.DailyUsage.route
 
     NavHost(navController = navController, startDestination = start) {
 
