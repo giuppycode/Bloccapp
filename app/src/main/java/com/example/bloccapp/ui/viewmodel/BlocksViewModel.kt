@@ -39,7 +39,10 @@ class BlocksViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteBlock(block: Block) {
         viewModelScope.launch {
-            gamificationRepo.addPoints(-6, "Eliminazione blocco: ${block.name}")
+            if (block.isEnabled) {
+                // Togliamo punti solo se il blocco era effettivamente attivo
+                gamificationRepo.addPoints(-10, "Eliminazione blocco attivo: ${block.name}")
+            }
             repository.deleteBlock(block)
         }
     }
