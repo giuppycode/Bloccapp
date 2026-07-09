@@ -1,7 +1,9 @@
 package com.example.bloccapp.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,19 +15,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,22 +45,26 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -62,7 +74,6 @@ import com.example.bloccapp.data.model.ScheduleType
 import com.example.bloccapp.data.model.UnlockConfig
 import com.example.bloccapp.data.model.WhatConfig
 import com.example.bloccapp.ui.viewmodel.AddBlockViewModel
-import androidx.compose.foundation.shape.RoundedCornerShape
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -120,7 +131,7 @@ fun AddBlockScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configura blocco", fontWeight = FontWeight.Bold) },
+                title = { Text("Configura Blocco", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Indietro")
@@ -135,74 +146,111 @@ fun AddBlockScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Nome blocco
-            OutlinedTextField(
-                value         = blockName,
-                onValueChange = { vm.setBlockName(it) },
-                placeholder   = {
-                    Text(
-                        "Nome del blocco",
-                        modifier  = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium
+            Spacer(Modifier.height(4.dp))
+
+            // Nome blocco con icona
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Block,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
                     )
-                },
-                textStyle = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    textAlign  = TextAlign.Center
-                ),
-                shape    = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // App selezionate
-            FormRowNavigable(
-                label   = "App da bloccare",
-                value   = if (selectedPackages.isEmpty()) "" else "${selectedPackages.size} app selezionate",
-                onClick = { onSelectApps(selectedPackages) }
-            )
-
-            // Regole orarie/limiti
-            FormRowNavigable(
-                label   = "Quando bloccare",
-                value   = schedule.displayText(),
-                onClick = {
-                    if (schedule.type == ScheduleType.LOCATION) {
-                        onSelectLocation(schedule.lat, schedule.lng, schedule.radius)
-                    } else {
-                        showWhenSheet = true
-                    }
                 }
-            )
+
+                OutlinedTextField(
+                    value         = blockName,
+                    onValueChange = { vm.setBlockName(it) },
+                    label = { Text("Nome del blocco") },
+                    placeholder   = { Text("Esempio: Social Network") },
+                    textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    shape    = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+            }
+
+            // Sezione Selezione
+            FormSection(title = "Impostazioni", icon = Icons.Default.Android) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FormRowNavigable(
+                        label   = "App da bloccare",
+                        value   = if (selectedPackages.isEmpty()) "" else "${selectedPackages.size} app selezionate",
+                        icon    = Icons.Default.Android,
+                        onClick = { onSelectApps(selectedPackages) }
+                    )
+
+                    FormRowNavigable(
+                        label   = "Quando bloccare",
+                        value   = schedule.displayText(),
+                        icon    = when (schedule.type) {
+                            ScheduleType.TIME_SLOT -> Icons.Default.Schedule
+                            ScheduleType.LOCATION -> Icons.Default.Place
+                            ScheduleType.DAILY_USAGE -> Icons.Default.Timer
+                            ScheduleType.DAILY_OPENS -> Icons.Default.Update
+                            else -> Icons.Default.NotificationsActive
+                        },
+                        onClick = {
+                            if (schedule.type == ScheduleType.LOCATION) {
+                                onSelectLocation(schedule.lat, schedule.lng, schedule.radius)
+                            } else {
+                                showWhenSheet = true
+                            }
+                        }
+                    )
+                }
+            }
 
             // ── Reset to generic if needed ───────────────────────────────────
             if (schedule.type == ScheduleType.LOCATION) {
-                Button(
+                TextButton(
                     onClick = { showWhenSheet = true },
-                    colors = ButtonDefaults.textButtonColors(),
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
+                    Icon(Icons.Default.Update, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text("Cambia tipo di restrizione")
                 }
             }
 
             // ── What to block ─────────────────────────────────────────────────
-            WhatToBlockSection(config = whatConfig, onUpdate = { vm.setWhatConfig(it) })
+            FormSection(title = "Cosa bloccare", icon = Icons.Default.Block) {
+                WhatToBlockSection(config = whatConfig, onUpdate = { vm.setWhatConfig(it) })
+            }
 
             // Configurazione sblocco
-            HowToUnblockSection(config = unlockConfig, onUpdate = { vm.setUnlockConfig(it) })
+            FormSection(title = "Metodi di sblocco", icon = Icons.Default.Fingerprint) {
+                HowToUnblockSection(config = unlockConfig, onUpdate = { vm.setUnlockConfig(it) })
+            }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.weight(1f))
 
             Button(
                 onClick  = { vm.saveBlock() },
                 enabled  = blockName.isNotBlank() && selectedPackages.isNotEmpty(),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                Text("Salva blocco")
+                Text("Salva Blocco", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -417,20 +465,24 @@ private fun WhatToBlockSection(
     config: WhatConfig,
     onUpdate: (WhatConfig) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            "Cosa bloccare",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             FilterChip(
                 selected     = config.appStart,
                 onClick      = { onUpdate(config.copy(appStart = !config.appStart)) },
                 label        = { Text("Avvio app") },
                 leadingIcon  = if (config.appStart) {
                     { Icon(Icons.Default.Block, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                } else null
+                } else null,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
             )
             FilterChip(
                 selected     = config.notifications,
@@ -438,7 +490,9 @@ private fun WhatToBlockSection(
                 label        = { Text("Notifiche") },
                 leadingIcon  = if (config.notifications) {
                     { Icon(Icons.Default.NotificationsOff, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                } else null
+                } else null,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
             )
         }
     }
@@ -451,23 +505,23 @@ private fun HowToUnblockSection(
     config: UnlockConfig,
     onUpdate: (UnlockConfig) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            "Come sbloccare",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // ── Timer ────────────────────────────────────────────────────────────
         UnlockCard(
             icon    = Icons.Default.Timer,
-            label   = "Timer",
+            label   = "Timer di attesa",
             checked = config.timer,
-            onToggle = { onUpdate(config.copy(timer = it)) }
+            onToggle = { isChecked ->
+                onUpdate(if (isChecked) {
+                    config.copy(timer = true, qrCode = false, pin = false, biometric = false)
+                } else {
+                    config.copy(timer = false)
+                })
+            }
         ) {
             if (config.timer) {
                 Column(
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
@@ -479,7 +533,7 @@ private fun HowToUnblockSection(
                         value         = config.timerMinutes.toFloat(),
                         onValueChange = { onUpdate(config.copy(timerMinutes = it.toInt())) },
                         valueRange    = 5f..120f,
-                        steps         = 22,   // (120-5)/5 - 1 = 22
+                        steps         = 22,
                         modifier      = Modifier.fillMaxWidth()
                     )
                 }
@@ -489,16 +543,22 @@ private fun HowToUnblockSection(
         // ── QR Code ──────────────────────────────────────────────────────────
         UnlockCard(
             icon    = Icons.Default.QrCode,
-            label   = "Codice QR",
+            label   = "Scansione QR",
             checked = config.qrCode,
-            onToggle = { onUpdate(config.copy(qrCode = it)) }
+            onToggle = { isChecked ->
+                onUpdate(if (isChecked) {
+                    config.copy(qrCode = true, timer = false, pin = false, biometric = false)
+                } else {
+                    config.copy(qrCode = false)
+                })
+            }
         ) {
             if (config.qrCode) {
                 Text(
-                    "Un codice QR verrà generato al salvataggio. Scansionalo per sbloccare.",
+                    "Un codice QR verrà generato al salvataggio. Dovrai scansionarlo per sbloccare.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
         }
@@ -506,9 +566,15 @@ private fun HowToUnblockSection(
         // ── PIN ──────────────────────────────────────────────────────────────
         UnlockCard(
             icon    = Icons.Default.Password,
-            label   = "PIN",
+            label   = "Codice PIN",
             checked = config.pin,
-            onToggle = { onUpdate(config.copy(pin = it)) }
+            onToggle = { isChecked ->
+                onUpdate(if (isChecked) {
+                    config.copy(pin = true, timer = false, qrCode = false, biometric = false)
+                } else {
+                    config.copy(pin = false)
+                })
+            }
         ) {
             if (config.pin) {
                 OutlinedTextField(
@@ -517,12 +583,13 @@ private fun HowToUnblockSection(
                         if (it.length <= 4 && it.all { c -> c.isDigit() })
                             onUpdate(config.copy(pinRaw = it))
                     },
-                    label               = { Text("PIN a 4 cifre") },
+                    label               = { Text("Inserisci PIN a 4 cifre") },
                     keyboardOptions     = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(12.dp),
                     modifier            = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = 12.dp),
                     singleLine          = true
                 )
             }
@@ -533,14 +600,20 @@ private fun HowToUnblockSection(
             icon    = Icons.Default.Fingerprint,
             label   = "Biometrico",
             checked = config.biometric,
-            onToggle = { onUpdate(config.copy(biometric = it)) }
+            onToggle = { isChecked ->
+                onUpdate(if (isChecked) {
+                    config.copy(biometric = true, timer = false, qrCode = false, pin = false)
+                } else {
+                    config.copy(biometric = false)
+                })
+            }
         ) {
             if (config.biometric) {
                 Text(
-                    "Usa impronta digitale o riconoscimento facciale.",
+                    "Usa l'impronta digitale o il volto configurati sul dispositivo.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
         }
@@ -549,47 +622,94 @@ private fun HowToUnblockSection(
 
 // Componenti interni
 
+@Composable
+private fun FormSection(
+    title: String,
+    icon: ImageVector,
+    content: @Composable () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        content()
+    }
+}
+
 /** Riga cliccabile con freccia, usata per "Selected apps" e "When to block". */
 @Composable
 private fun FormRowNavigable(
     label: String,
     value: String,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Card(
-            shape    = RoundedCornerShape(12.dp),
-            colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
+    Card(
+        shape    = RoundedCornerShape(24.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier              = Modifier
                 .fillMaxWidth()
-                .clickable { onClick() }
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment     = Alignment.CenterVertically
         ) {
-            Row(
-                modifier              = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment     = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     text  = value.ifBlank { "Seleziona…" },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
                     color = if (value.isBlank())
                         MaterialTheme.colorScheme.onSurfaceVariant
                     else
                         MaterialTheme.colorScheme.onSurface
                 )
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
+
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
         }
     }
 }
@@ -624,16 +744,16 @@ private fun UnlockCard(
     content: @Composable () -> Unit
 ) {
     Card(
-        shape  = RoundedCornerShape(12.dp),
+        shape  = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (checked)
-                MaterialTheme.colorScheme.primaryContainer
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
             else
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -641,21 +761,37 @@ private fun UnlockCard(
             ) {
                 Row(
                     verticalAlignment  = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        icon,
-                        contentDescription = label,
-                        tint = if (checked) MaterialTheme.colorScheme.primary
-                               else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (checked) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.05f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = label,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (checked) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         label,
-                        style      = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal
+                        style      = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (checked) FontWeight.Bold else FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Switch(checked = checked, onCheckedChange = onToggle)
+                Switch(
+                    checked = checked, 
+                    onCheckedChange = onToggle,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
             content()
         }
